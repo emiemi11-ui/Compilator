@@ -4,6 +4,7 @@ using CompilatorLFT.Models;
 using CompilatorLFT.Models.Expressions;
 using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
+using ProgramNode = CompilatorLFT.Models.Statements.Program;
 
 namespace CompilatorLFT.Core
 {
@@ -99,7 +100,7 @@ namespace CompilatorLFT.Core
         /// Executes the entire program.
         /// </summary>
         /// <param name="program">Program to execute</param>
-        public void ExecuteProgram(Program program)
+        public void ExecuteProgram(ProgramNode program)
         {
             // Register user-defined functions
             foreach (var func in program.Functions)
