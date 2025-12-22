@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RootNamespace>CompilatorLFT</RootNamespace>
+    <AssemblyName>CompilatorLFT</AssemblyName>
+    <Version>1.0.0</Version>
+    <Authors>Student UAIC</Authors>
+    <Description>Compilator pentru Limbaje Formale si Translatoare - Proiect academic UAIC Iasi</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>4</WarningLevel>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+</Project>
