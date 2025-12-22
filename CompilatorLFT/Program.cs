@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CompilatorLFT.Core;
+using CompilatorLFT.Core.VM;
 using CompilatorLFT.Models;
 using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
@@ -51,6 +52,18 @@ namespace CompilatorLFT
                         break;
 
                     case "5":
+                        RunREPL();
+                        break;
+
+                    case "6":
+                        RunBytecodeMode();
+                        break;
+
+                    case "7":
+                        RunAdvancedAnalysis();
+                        break;
+
+                    case "8":
                     case "q":
                     case "Q":
                         Console.WriteLine("\nGoodbye!");
@@ -58,7 +71,7 @@ namespace CompilatorLFT
 
                     default:
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine("Invalid choice! Enter a number between 1-5.");
+                        Console.WriteLine("Invalid choice! Enter a number between 1-8.");
                         Console.ResetColor();
                         break;
                 }
@@ -84,15 +97,18 @@ namespace CompilatorLFT
 
         static void DisplayMenu()
         {
-            Console.WriteLine("╔══════════════════════════════════════╗");
-            Console.WriteLine("║            MAIN MENU                 ║");
-            Console.WriteLine("╠══════════════════════════════════════╣");
-            Console.WriteLine("║  1. Read from file                   ║");
-            Console.WriteLine("║  2. Manual code input                ║");
-            Console.WriteLine("║  3. Run automated tests              ║");
-            Console.WriteLine("║  4. Display examples                 ║");
-            Console.WriteLine("║  5. Exit                             ║");
-            Console.WriteLine("╚══════════════════════════════════════╝");
+            Console.WriteLine("╔══════════════════════════════════════════╗");
+            Console.WriteLine("║              MAIN MENU                   ║");
+            Console.WriteLine("╠══════════════════════════════════════════╣");
+            Console.WriteLine("║  1. Read from file                       ║");
+            Console.WriteLine("║  2. Manual code input                    ║");
+            Console.WriteLine("║  3. Run automated tests                  ║");
+            Console.WriteLine("║  4. Display examples                     ║");
+            Console.WriteLine("║  5. Interactive REPL                     ║");
+            Console.WriteLine("║  6. Bytecode mode (VM)                   ║");
+            Console.WriteLine("║  7. Advanced analysis                    ║");
+            Console.WriteLine("║  8. Exit                                 ║");
+            Console.WriteLine("╚══════════════════════════════════════════╝");
         }
 
         #endregion
@@ -550,6 +566,258 @@ print(a + b);
                 Console.WriteLine($"\n--- {title} ---");
                 Console.ResetColor();
                 Console.WriteLine(code.Trim());
+            }
+        }
+
+        #endregion
+
+        #region Advanced Features
+
+        /// <summary>
+        /// Runs the interactive REPL.
+        /// </summary>
+        static void RunREPL()
+        {
+            Console.Clear();
+            var repl = new REPL();
+            repl.Start();
+        }
+
+        /// <summary>
+        /// Runs bytecode compilation and VM execution mode.
+        /// </summary>
+        static void RunBytecodeMode()
+        {
+            Console.WriteLine("\n" + new string('=', 60));
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("BYTECODE COMPILATION & VM EXECUTION");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 60));
+
+            Console.WriteLine("\nEnter source code (empty line to finish):");
+
+            var lines = new List<string>();
+            int lineNumber = 1;
+
+            while (true)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"{lineNumber,3} | ");
+                Console.ResetColor();
+
+                string line = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                lines.Add(line);
+                lineNumber++;
+            }
+
+            if (lines.Count == 0)
+            {
+                Console.WriteLine("No code entered!");
+                return;
+            }
+
+            string content = string.Join("\n", lines);
+
+            try
+            {
+                // Phase 1: Lexical analysis
+                var lexer = new Lexer(content);
+                var tokens = lexer.Tokenize();
+
+                if (lexer.Errors.Any())
+                {
+                    DisplayErrors("LEXICAL ERRORS", lexer.Errors);
+                    return;
+                }
+
+                // Phase 2: Parsing
+                var parser = new Parser(content);
+                var program = parser.ParseProgram();
+
+                if (parser.Errors.Any())
+                {
+                    DisplayErrors("SYNTACTIC/SEMANTIC ERRORS", parser.Errors);
+                    return;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\nCompilation successful!");
+                Console.ResetColor();
+
+                // Phase 3: Bytecode compilation
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("BYTECODE COMPILATION");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                var compiler = new BytecodeCompiler();
+                var bytecodeProgram = compiler.Compile(program);
+
+                Console.WriteLine($"\nCompiled {bytecodeProgram.Instructions.Count} instructions");
+                Console.WriteLine($"Constant pool: {bytecodeProgram.ConstantPool.Count} entries");
+                Console.WriteLine($"Functions: {bytecodeProgram.FunctionTable.Count}");
+
+                // Display bytecode
+                bytecodeProgram.Display();
+
+                // Phase 4: VM execution
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("VM EXECUTION");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                Console.WriteLine("\nOutput:");
+                Console.ForegroundColor = ConsoleColor.White;
+
+                var vm = new VirtualMachine();
+                vm.Execute(bytecodeProgram);
+
+                Console.ResetColor();
+
+                // Display VM state
+                vm.DisplayState();
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"\nExecution complete! ({vm.InstructionsExecuted} instructions executed)");
+                Console.ResetColor();
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\nError: {ex.Message}");
+                Console.ResetColor();
+            }
+        }
+
+        /// <summary>
+        /// Runs advanced static analysis and optimization.
+        /// </summary>
+        static void RunAdvancedAnalysis()
+        {
+            Console.WriteLine("\n" + new string('=', 60));
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("ADVANCED STATIC ANALYSIS & OPTIMIZATION");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 60));
+
+            Console.WriteLine("\nEnter source code (empty line to finish):");
+
+            var lines = new List<string>();
+            int lineNumber = 1;
+
+            while (true)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"{lineNumber,3} | ");
+                Console.ResetColor();
+
+                string line = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                lines.Add(line);
+                lineNumber++;
+            }
+
+            if (lines.Count == 0)
+            {
+                Console.WriteLine("No code entered!");
+                return;
+            }
+
+            string content = string.Join("\n", lines);
+
+            try
+            {
+                // Phase 1: Lexical analysis
+                var lexer = new Lexer(content);
+                var tokens = lexer.Tokenize();
+
+                if (lexer.Errors.Any())
+                {
+                    DisplayErrors("LEXICAL ERRORS", lexer.Errors);
+                    return;
+                }
+
+                // Phase 2: Parsing
+                var parser = new Parser(content);
+                var program = parser.ParseProgram();
+
+                if (parser.Errors.Any())
+                {
+                    DisplayErrors("SYNTACTIC/SEMANTIC ERRORS", parser.Errors);
+                    return;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\nParsing successful!");
+                Console.ResetColor();
+
+                // Phase 3: Static Analysis
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("STATIC ANALYSIS");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                var analyzer = new StaticAnalyzer(parser.SymbolTable);
+                analyzer.Analyze(program);
+                analyzer.DisplayWarnings();
+
+                // Phase 4: Code Optimization
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("CODE OPTIMIZATION");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                // Display original AST
+                Console.WriteLine("\nOriginal AST:");
+                program.DisplayTree();
+
+                var optimizer = new CodeOptimizer();
+                program = optimizer.Optimize(program);
+
+                optimizer.DisplayStatistics();
+
+                // Display optimized AST
+                Console.WriteLine("\nOptimized AST:");
+                program.DisplayTree();
+
+                // Phase 5: Generate optimized TAC
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("OPTIMIZED THREE-ADDRESS CODE");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                var tacGenerator = new ThreeAddressCodeGenerator();
+                tacGenerator.Generate(program);
+                tacGenerator.DisplayTAC();
+
+                // Summary
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("ANALYSIS SUMMARY");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                Console.WriteLine($"\n{analyzer.GetSummary()}");
+                Console.WriteLine(optimizer.GetSummary());
+
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\nError: {ex.Message}");
+                Console.ResetColor();
             }
         }
 
