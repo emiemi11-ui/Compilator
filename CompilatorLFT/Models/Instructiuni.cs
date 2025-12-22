@@ -133,13 +133,14 @@ namespace CompilatorLFT.Models.Statements
         public ExpressionStatement(Expression expression, Token semicolon)
         {
             Expression = expression ?? throw new ArgumentNullException(nameof(expression));
-            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
+            Semicolon = semicolon; // Can be null in for increment
         }
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {
             yield return Expression;
-            yield return Semicolon;
+            if (Semicolon != null)
+                yield return Semicolon;
         }
     }
 

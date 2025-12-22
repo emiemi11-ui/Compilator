@@ -327,6 +327,13 @@ namespace CompilatorLFT.Core
 
             var closeParen = ExpectType(TokenType.CloseParen);
 
+            // Add parameters to symbol table for body parsing
+            foreach (var param in parameters)
+            {
+                var dataType = SymbolTable.ConvertToDataType(param.TypeKeyword.Type);
+                _symbolTable.Add(param.Identifier.Text, dataType, param.Identifier.Line, param.Identifier.Column, _errors);
+            }
+
             // Body
             var body = ParseBlock();
 

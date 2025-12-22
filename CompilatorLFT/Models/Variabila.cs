@@ -142,6 +142,7 @@ namespace CompilatorLFT.Models
                 DataType.Int => value is int,
                 DataType.Double => value is double || value is int, // Int can be promoted to double
                 DataType.String => value is string,
+                DataType.Bool => value is bool,
                 _ => false
             };
         }
