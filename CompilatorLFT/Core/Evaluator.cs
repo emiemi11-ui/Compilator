@@ -12,7 +12,19 @@ namespace CompilatorLFT.Core
     /// </summary>
     /// <remarks>
     /// Reference: Dragon Book, Ch. 5 - Syntax-Directed Translation
-    /// Implements Visitor Pattern for AST traversal.
+    /// Reference: Grigoraș "Proiectarea Compilatoarelor", Cap. 6.5
+    /// Reference: Levine "Flex & Bison", Ch. 3
+    ///
+    /// Implements:
+    /// - Tree-walking interpreter (Visitor Pattern for AST traversal)
+    /// - Print statement (Grigoraș 6.5)
+    /// - User-defined functions (Flex & Bison style)
+    /// - Built-in functions (sqrt, abs, exp, log, etc.)
+    /// - Logical operators with short-circuit evaluation (&&, ||, !)
+    /// - Break/Continue statements
+    /// - Return statements
+    /// - Increment/decrement operators (++, --)
+    /// - Compound assignment operators (+=, -=, *=, /=, %=)
     /// </remarks>
     public class Evaluator
     {
@@ -21,12 +33,34 @@ namespace CompilatorLFT.Core
         private readonly SymbolTable _symbolTable;
         private readonly List<CompilationError> _errors;
         private readonly List<string> _output;
+        private readonly Dictionary<string, FunctionDeclaration> _functions;
+
+        // Stack for function call contexts
+        private readonly Stack<Dictionary<string, object>> _callStack;
+        private bool _inLoop;
 
         // Constant for floating point comparison
         private const double EPSILON = 1e-10;
 
         // Limit for loops (to avoid infinite loops)
         private const int ITERATION_LIMIT = 100000;
+
+        #endregion
+
+        #region Control Flow Exceptions
+
+        /// <summary>Exception for break statement.</summary>
+        private class BreakException : Exception { }
+
+        /// <summary>Exception for continue statement.</summary>
+        private class ContinueException : Exception { }
+
+        /// <summary>Exception for return statement.</summary>
+        private class ReturnException : Exception
+        {
+            public object Value { get; }
+            public ReturnException(object value) => Value = value;
+        }
 
         #endregion
 
@@ -46,11 +80,15 @@ namespace CompilatorLFT.Core
         /// Initializes the evaluator with the symbol table.
         /// </summary>
         /// <param name="symbolTable">Symbol table populated by parser</param>
-        public Evaluator(SymbolTable symbolTable)
+        /// <param name="functions">User-defined functions</param>
+        public Evaluator(SymbolTable symbolTable, Dictionary<string, FunctionDeclaration> functions = null)
         {
             _symbolTable = symbolTable ?? throw new ArgumentNullException(nameof(symbolTable));
+            _functions = functions ?? new Dictionary<string, FunctionDeclaration>();
             _errors = new List<CompilationError>();
             _output = new List<string>();
+            _callStack = new Stack<Dictionary<string, object>>();
+            _inLoop = false;
         }
 
         #endregion
@@ -63,9 +101,34 @@ namespace CompilatorLFT.Core
         /// <param name="program">Program to execute</param>
         public void ExecuteProgram(Program program)
         {
+            // Register user-defined functions
+            foreach (var func in program.Functions)
+            {
+                _functions[func.Name.Text] = func;
+            }
+
+            // Execute all statements
             foreach (var statement in program.Statements)
             {
-                ExecuteStatement(statement);
+                try
+                {
+                    ExecuteStatement(statement);
+                }
+                catch (ReturnException)
+                {
+                    _errors.Add(CompilationError.Semantic(1, 1,
+                        "return statement outside of function"));
+                }
+                catch (BreakException)
+                {
+                    _errors.Add(CompilationError.Semantic(1, 1,
+                        "break statement outside of loop"));
+                }
+                catch (ContinueException)
+                {
+                    _errors.Add(CompilationError.Semantic(1, 1,
+                        "continue statement outside of loop"));
+                }
             }
         }
 
@@ -84,8 +147,26 @@ namespace CompilatorLFT.Core
                     ExecuteAssignment(assign);
                     break;
 
+                case CompoundAssignmentStatement compound:
+                    ExecuteCompoundAssignment(compound);
+                    break;
+
                 case ExpressionStatement expr:
                     ExecuteStandaloneExpression(expr);
+                    break;
+
+                case PrintStatement print:
+                    ExecutePrint(print);
+                    break;
+
+                case BreakStatement:
+                    throw new BreakException();
+
+                case ContinueStatement:
+                    throw new ContinueException();
+
+                case ReturnStatement ret:
+                    ExecuteReturn(ret);
                     break;
 
                 case ForStatement forStmt:
@@ -163,18 +244,87 @@ namespace CompilatorLFT.Core
         }
 
         /// <summary>
+        /// Executes a compound assignment (+=, -=, *=, /=, %=).
+        /// </summary>
+        private void ExecuteCompoundAssignment(CompoundAssignmentStatement stmt)
+        {
+            var currentValue = _symbolTable.GetValue(
+                stmt.Identifier.Text,
+                stmt.Identifier.Line, stmt.Identifier.Column, _errors);
+
+            var addValue = EvaluateExpression(stmt.Expression);
+
+            if (currentValue == null || addValue == null)
+                return;
+
+            object result = stmt.Operator.Type switch
+            {
+                TokenType.PlusEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Plus, "+", null, stmt.Operator.Line, stmt.Operator.Column, 0),
+                    addValue),
+                TokenType.MinusEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Minus, "-", null, stmt.Operator.Line, stmt.Operator.Column, 0),
+                    addValue),
+                TokenType.StarEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Star, "*", null, stmt.Operator.Line, stmt.Operator.Column, 0),
+                    addValue),
+                TokenType.SlashEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Slash, "/", null, stmt.Operator.Line, stmt.Operator.Column, 0),
+                    addValue),
+                TokenType.PercentEqual => EvaluateModulo(currentValue, addValue, stmt.Operator),
+                _ => null
+            };
+
+            if (result != null)
+            {
+                _symbolTable.SetValue(
+                    stmt.Identifier.Text, result,
+                    stmt.Identifier.Line, stmt.Identifier.Column, _errors);
+            }
+        }
+
+        /// <summary>
         /// Executes a standalone expression and displays the result.
         /// </summary>
         private void ExecuteStandaloneExpression(ExpressionStatement expr)
         {
             var result = EvaluateExpression(expr.Expression);
 
-            if (result != null)
+            // Only show result if it's not an increment expression (side effect only)
+            if (result != null && !(expr.Expression is IncrementExpression))
             {
                 string output = $"Result: {FormatValue(result)}";
                 _output.Add(output);
                 Console.WriteLine(output);
             }
+        }
+
+        /// <summary>
+        /// Executes a print statement (Grigoraș 6.5).
+        /// </summary>
+        private void ExecutePrint(PrintStatement print)
+        {
+            var result = EvaluateExpression(print.Expression);
+
+            if (result != null)
+            {
+                string output = FormatOutputValue(result);
+                _output.Add(output);
+                Console.WriteLine(output);
+            }
+        }
+
+        /// <summary>
+        /// Executes a return statement.
+        /// </summary>
+        private void ExecuteReturn(ReturnStatement ret)
+        {
+            object value = null;
+            if (ret.Expression != null)
+            {
+                value = EvaluateExpression(ret.Expression);
+            }
+            throw new ReturnException(value);
         }
 
         /// <summary>
@@ -189,36 +339,56 @@ namespace CompilatorLFT.Core
             }
 
             int iterations = 0;
+            bool wasInLoop = _inLoop;
+            _inLoop = true;
 
-            // Loop
-            while (true)
+            try
             {
-                if (++iterations > ITERATION_LIMIT)
+                // Loop
+                while (true)
                 {
-                    _errors.Add(CompilationError.Semantic(
-                        forStmt.ForKeyword.Line,
-                        forStmt.ForKeyword.Column,
-                        $"for loop exceeded limit of {ITERATION_LIMIT} iterations"));
-                    break;
-                }
-
-                // Evaluate condition
-                if (forStmt.Condition != null)
-                {
-                    var condition = EvaluateExpression(forStmt.Condition);
-
-                    if (!IsTrue(condition))
+                    if (++iterations > ITERATION_LIMIT)
+                    {
+                        _errors.Add(CompilationError.Semantic(
+                            forStmt.ForKeyword.Line,
+                            forStmt.ForKeyword.Column,
+                            $"for loop exceeded limit of {ITERATION_LIMIT} iterations"));
                         break;
-                }
+                    }
 
-                // Execute body
-                ExecuteStatement(forStmt.Body);
+                    // Evaluate condition
+                    if (forStmt.Condition != null)
+                    {
+                        var condition = EvaluateExpression(forStmt.Condition);
 
-                // Increment
-                if (forStmt.Increment != null)
-                {
-                    ExecuteStatement(forStmt.Increment);
+                        if (!IsTrue(condition))
+                            break;
+                    }
+
+                    try
+                    {
+                        // Execute body
+                        ExecuteStatement(forStmt.Body);
+                    }
+                    catch (ContinueException)
+                    {
+                        // Continue to increment
+                    }
+                    catch (BreakException)
+                    {
+                        break;
+                    }
+
+                    // Increment
+                    if (forStmt.Increment != null)
+                    {
+                        ExecuteStatement(forStmt.Increment);
+                    }
                 }
+            }
+            finally
+            {
+                _inLoop = wasInLoop;
             }
         }
 
@@ -228,24 +398,44 @@ namespace CompilatorLFT.Core
         private void ExecuteWhile(WhileStatement whileStmt)
         {
             int iterations = 0;
+            bool wasInLoop = _inLoop;
+            _inLoop = true;
 
-            while (true)
+            try
             {
-                if (++iterations > ITERATION_LIMIT)
+                while (true)
                 {
-                    _errors.Add(CompilationError.Semantic(
-                        whileStmt.WhileKeyword.Line,
-                        whileStmt.WhileKeyword.Column,
-                        $"while loop exceeded limit of {ITERATION_LIMIT} iterations"));
-                    break;
+                    if (++iterations > ITERATION_LIMIT)
+                    {
+                        _errors.Add(CompilationError.Semantic(
+                            whileStmt.WhileKeyword.Line,
+                            whileStmt.WhileKeyword.Column,
+                            $"while loop exceeded limit of {ITERATION_LIMIT} iterations"));
+                        break;
+                    }
+
+                    var condition = EvaluateExpression(whileStmt.Condition);
+
+                    if (!IsTrue(condition))
+                        break;
+
+                    try
+                    {
+                        ExecuteStatement(whileStmt.Body);
+                    }
+                    catch (ContinueException)
+                    {
+                        // Continue to next iteration
+                    }
+                    catch (BreakException)
+                    {
+                        break;
+                    }
                 }
-
-                var condition = EvaluateExpression(whileStmt.Condition);
-
-                if (!IsTrue(condition))
-                    break;
-
-                ExecuteStatement(whileStmt.Body);
+            }
+            finally
+            {
+                _inLoop = wasInLoop;
             }
         }
 
@@ -290,10 +480,16 @@ namespace CompilatorLFT.Core
             {
                 NumericExpression num => EvaluateNumericExpression(num),
                 StringExpression str => EvaluateStringExpression(str),
+                BooleanExpression boolExpr => boolExpr.Value,
                 IdentifierExpression id => EvaluateIdentifierExpression(id),
                 UnaryExpression unary => EvaluateUnaryExpression(unary),
+                NotExpression not => EvaluateNotExpression(not),
                 BinaryExpression binary => EvaluateBinaryExpression(binary),
+                LogicalExpression logical => EvaluateLogicalExpression(logical),
                 ParenthesizedExpression paren => EvaluateExpression(paren.Expression),
+                IncrementExpression inc => EvaluateIncrementExpression(inc),
+                FunctionCallExpression call => EvaluateFunctionCall(call),
+                ArrayAccessExpression arr => EvaluateArrayAccess(arr),
                 _ => null
             };
         }
@@ -341,6 +537,16 @@ namespace CompilatorLFT.Core
             return null;
         }
 
+        private object EvaluateNotExpression(NotExpression not)
+        {
+            var operand = EvaluateExpression(not.Operand);
+
+            if (operand == null)
+                return null;
+
+            return !IsTrue(operand);
+        }
+
         private object EvaluateBinaryExpression(BinaryExpression binary)
         {
             var left = EvaluateExpression(binary.Left);
@@ -354,6 +560,10 @@ namespace CompilatorLFT.Core
             // Arithmetic operations
             if (op.IsArithmeticOperator())
             {
+                if (op.Type == TokenType.Percent)
+                {
+                    return EvaluateModulo(left, right, op);
+                }
                 return EvaluateArithmeticOperation(left, op, right);
             }
 
@@ -367,6 +577,263 @@ namespace CompilatorLFT.Core
                 op.Line, op.Column,
                 $"unknown operator '{op.Text}'"));
 
+            return null;
+        }
+
+        /// <summary>
+        /// Evaluates a logical expression with short-circuit evaluation.
+        /// </summary>
+        private object EvaluateLogicalExpression(LogicalExpression logical)
+        {
+            var left = EvaluateExpression(logical.Left);
+
+            if (left == null)
+                return null;
+
+            bool leftBool = IsTrue(left);
+
+            // Short-circuit evaluation
+            if (logical.Operator.Type == TokenType.LogicalAnd)
+            {
+                // For &&: if left is false, return false without evaluating right
+                if (!leftBool)
+                    return false;
+
+                var right = EvaluateExpression(logical.Right);
+                return right != null && IsTrue(right);
+            }
+            else if (logical.Operator.Type == TokenType.LogicalOr)
+            {
+                // For ||: if left is true, return true without evaluating right
+                if (leftBool)
+                    return true;
+
+                var right = EvaluateExpression(logical.Right);
+                return right != null && IsTrue(right);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Evaluates an increment/decrement expression.
+        /// </summary>
+        private object EvaluateIncrementExpression(IncrementExpression inc)
+        {
+            var currentValue = _symbolTable.GetValue(
+                inc.Identifier.Text,
+                inc.Identifier.Line,
+                inc.Identifier.Column,
+                _errors);
+
+            if (currentValue == null)
+                return null;
+
+            object newValue;
+            object returnValue;
+
+            if (currentValue is int intVal)
+            {
+                newValue = inc.IsIncrement ? intVal + 1 : intVal - 1;
+                returnValue = inc.IsPrefix ? newValue : intVal;
+            }
+            else if (currentValue is double doubleVal)
+            {
+                newValue = inc.IsIncrement ? doubleVal + 1.0 : doubleVal - 1.0;
+                returnValue = inc.IsPrefix ? newValue : doubleVal;
+            }
+            else
+            {
+                _errors.Add(CompilationError.Semantic(
+                    inc.Operator.Line, inc.Operator.Column,
+                    $"increment/decrement can only be applied to numeric types"));
+                return null;
+            }
+
+            // Update the variable
+            _symbolTable.SetValue(
+                inc.Identifier.Text, newValue,
+                inc.Identifier.Line, inc.Identifier.Column, _errors);
+
+            return returnValue;
+        }
+
+        /// <summary>
+        /// Evaluates a function call.
+        /// </summary>
+        private object EvaluateFunctionCall(FunctionCallExpression call)
+        {
+            string funcName = call.FunctionName.Text;
+
+            // Check for built-in functions
+            if (IsBuiltInFunction(funcName))
+            {
+                return EvaluateBuiltInFunction(funcName, call);
+            }
+
+            // User-defined function
+            if (_functions.TryGetValue(funcName, out var funcDecl))
+            {
+                return ExecuteUserFunction(funcDecl, call);
+            }
+
+            _errors.Add(CompilationError.Semantic(
+                call.FunctionName.Line, call.FunctionName.Column,
+                $"undefined function '{funcName}'"));
+
+            return null;
+        }
+
+        /// <summary>
+        /// Checks if a function is built-in.
+        /// </summary>
+        private bool IsBuiltInFunction(string name)
+        {
+            return name == "print" || name == "sqrt" || name == "abs" ||
+                   name == "exp" || name == "log" || name == "sin" ||
+                   name == "cos" || name == "tan" || name == "pow" ||
+                   name == "min" || name == "max" || name == "floor" ||
+                   name == "ceil" || name == "round" || name == "length" ||
+                   name == "input" || name == "parseInt" || name == "parseDouble" ||
+                   name == "toString";
+        }
+
+        /// <summary>
+        /// Evaluates a built-in function (Flex & Bison style).
+        /// </summary>
+        private object EvaluateBuiltInFunction(string funcName, FunctionCallExpression call)
+        {
+            var args = new List<object>();
+            foreach (var arg in call.Arguments)
+            {
+                var value = EvaluateExpression(arg);
+                if (value != null)
+                    args.Add(value);
+            }
+
+            try
+            {
+                return funcName switch
+                {
+                    "print" => ExecutePrintFunction(args),
+                    "sqrt" => Math.Sqrt(ConvertToDouble(args[0])),
+                    "abs" => args[0] is int i ? Math.Abs(i) : Math.Abs(ConvertToDouble(args[0])),
+                    "exp" => Math.Exp(ConvertToDouble(args[0])),
+                    "log" => Math.Log(ConvertToDouble(args[0])),
+                    "sin" => Math.Sin(ConvertToDouble(args[0])),
+                    "cos" => Math.Cos(ConvertToDouble(args[0])),
+                    "tan" => Math.Tan(ConvertToDouble(args[0])),
+                    "pow" => Math.Pow(ConvertToDouble(args[0]), ConvertToDouble(args[1])),
+                    "min" => Math.Min(ConvertToDouble(args[0]), ConvertToDouble(args[1])),
+                    "max" => Math.Max(ConvertToDouble(args[0]), ConvertToDouble(args[1])),
+                    "floor" => Math.Floor(ConvertToDouble(args[0])),
+                    "ceil" => Math.Ceiling(ConvertToDouble(args[0])),
+                    "round" => Math.Round(ConvertToDouble(args[0])),
+                    "length" => args[0] is string s ? s.Length : 0,
+                    "input" => Console.ReadLine() ?? "",
+                    "parseInt" => int.TryParse(args[0]?.ToString(), out int pi) ? pi : 0,
+                    "parseDouble" => double.TryParse(args[0]?.ToString(), out double pd) ? pd : 0.0,
+                    "toString" => args[0]?.ToString() ?? "",
+                    _ => null
+                };
+            }
+            catch (Exception ex)
+            {
+                _errors.Add(CompilationError.Semantic(
+                    call.FunctionName.Line, call.FunctionName.Column,
+                    $"error calling function '{funcName}': {ex.Message}"));
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Executes the print built-in function.
+        /// </summary>
+        private object ExecutePrintFunction(List<object> args)
+        {
+            if (args.Count > 0)
+            {
+                string output = FormatOutputValue(args[0]);
+                _output.Add(output);
+                Console.WriteLine(output);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Executes a user-defined function.
+        /// </summary>
+        private object ExecuteUserFunction(FunctionDeclaration func, FunctionCallExpression call)
+        {
+            // Check argument count
+            if (call.Arguments.Count != func.Parameters.Count)
+            {
+                _errors.Add(CompilationError.Semantic(
+                    call.FunctionName.Line, call.FunctionName.Column,
+                    $"function '{func.Name.Text}' expects {func.Parameters.Count} arguments, got {call.Arguments.Count}"));
+                return null;
+            }
+
+            // Save old values of parameters (in case they shadow global variables)
+            var oldValues = new Dictionary<string, (object value, bool existed)>();
+
+            // Evaluate arguments and bind to parameters
+            for (int i = 0; i < func.Parameters.Count; i++)
+            {
+                var param = func.Parameters[i];
+                var argValue = EvaluateExpression(call.Arguments[i]);
+
+                // Save old value if variable exists
+                if (_symbolTable.Exists(param.Identifier.Text))
+                {
+                    oldValues[param.Identifier.Text] = (
+                        _symbolTable.GetValue(param.Identifier.Text, 0, 0, new List<CompilationError>()),
+                        true
+                    );
+                }
+                else
+                {
+                    oldValues[param.Identifier.Text] = (null, false);
+                    var dataType = SymbolTable.ConvertToDataType(param.TypeKeyword.Type);
+                    _symbolTable.Add(param.Identifier.Text, dataType, 0, 0, new List<CompilationError>());
+                }
+
+                // Set parameter value
+                _symbolTable.SetValue(param.Identifier.Text, argValue, 0, 0, new List<CompilationError>());
+            }
+
+            try
+            {
+                // Execute function body
+                ExecuteBlock(func.Body);
+                return null; // No explicit return
+            }
+            catch (ReturnException ret)
+            {
+                return ret.Value;
+            }
+            finally
+            {
+                // Restore old values
+                foreach (var kvp in oldValues)
+                {
+                    if (kvp.Value.existed)
+                    {
+                        _symbolTable.SetValue(kvp.Key, kvp.Value.value, 0, 0, new List<CompilationError>());
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Evaluates an array access expression.
+        /// </summary>
+        private object EvaluateArrayAccess(ArrayAccessExpression arr)
+        {
+            // For now, just return null - array support would require more implementation
+            _errors.Add(CompilationError.Semantic(
+                arr.OpenBracket.Line, arr.OpenBracket.Column,
+                "array access is not fully implemented yet"));
             return null;
         }
 
@@ -440,6 +907,36 @@ namespace CompilatorLFT.Core
                 op.Line, op.Column,
                 $"type mismatch: {left?.GetType().Name ?? "null"} {op.Text} {right?.GetType().Name ?? "null"}"));
 
+            return null;
+        }
+
+        private object EvaluateModulo(object left, object right, Token op)
+        {
+            if (left is int i1 && right is int i2)
+            {
+                if (i2 == 0)
+                {
+                    _errors.Add(CompilationError.Semantic(op.Line, op.Column, "modulo by zero"));
+                    return null;
+                }
+                return i1 % i2;
+            }
+
+            if (IsNumber(left) && IsNumber(right))
+            {
+                double d1 = ConvertToDouble(left);
+                double d2 = ConvertToDouble(right);
+                if (Math.Abs(d2) < EPSILON)
+                {
+                    _errors.Add(CompilationError.Semantic(op.Line, op.Column, "modulo by zero"));
+                    return null;
+                }
+                return d1 % d2;
+            }
+
+            _errors.Add(CompilationError.Semantic(
+                op.Line, op.Column,
+                "modulo operator requires numeric operands"));
             return null;
         }
 
@@ -563,6 +1060,10 @@ namespace CompilatorLFT.Core
             if (value is double d)
                 return Math.Abs(d) >= EPSILON;
 
+            // Non-null string is true
+            if (value is string s)
+                return !string.IsNullOrEmpty(s);
+
             return false;
         }
 
@@ -575,9 +1076,14 @@ namespace CompilatorLFT.Core
             {
                 DataType.Int when value is int => value,
                 DataType.Int when value is double d => (int)d,
+                DataType.Int when value is bool b => b ? 1 : 0,
                 DataType.Double when value is double => value,
                 DataType.Double when value is int i => (double)i,
+                DataType.Double when value is bool b => b ? 1.0 : 0.0,
                 DataType.String when value is string => value,
+                DataType.String => value.ToString(),
+                DataType.Bool when value is bool => value,
+                DataType.Bool when IsNumber(value) => IsTrue(value),
                 _ => ReturnConversionError(value, type, line, column)
             };
         }
@@ -597,6 +1103,20 @@ namespace CompilatorLFT.Core
 
             if (value is bool b)
                 return b ? "true" : "false";
+
+            return value?.ToString() ?? "null";
+        }
+
+        private string FormatOutputValue(object value)
+        {
+            if (value is string str)
+                return str;  // Don't add quotes for print
+
+            if (value is bool b)
+                return b ? "true" : "false";
+
+            if (value is double d)
+                return d.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
             return value?.ToString() ?? "null";
         }

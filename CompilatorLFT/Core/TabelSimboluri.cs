@@ -197,9 +197,10 @@ namespace CompilatorLFT.Core
 
             return type switch
             {
-                DataType.Int => value is int || value is double,
-                DataType.Double => value is int || value is double,
+                DataType.Int => value is int || value is double || value is bool,
+                DataType.Double => value is int || value is double || value is bool,
                 DataType.String => value is string,
+                DataType.Bool => value is bool || value is int || value is double,
                 _ => false
             };
         }
@@ -216,9 +217,14 @@ namespace CompilatorLFT.Core
             {
                 DataType.Int when value is int i => i,
                 DataType.Int when value is double d => (int)d,
+                DataType.Int when value is bool b => b ? 1 : 0,
                 DataType.Double when value is double d => d,
                 DataType.Double when value is int i => (double)i,
+                DataType.Double when value is bool b => b ? 1.0 : 0.0,
                 DataType.String when value is string s => s,
+                DataType.Bool when value is bool b => b,
+                DataType.Bool when value is int i => i != 0,
+                DataType.Bool when value is double d => Math.Abs(d) > 1e-10,
                 _ => value
             };
         }
@@ -233,6 +239,8 @@ namespace CompilatorLFT.Core
                 TokenType.KeywordInt => DataType.Int,
                 TokenType.KeywordDouble => DataType.Double,
                 TokenType.KeywordString => DataType.String,
+                TokenType.KeywordBool => DataType.Bool,
+                TokenType.KeywordVoid => DataType.Void,
                 _ => DataType.Unknown
             };
         }

@@ -38,6 +38,12 @@ namespace CompilatorLFT.Models
         /// <summary>Keyword 'string' for string type</summary>
         KeywordString,
 
+        /// <summary>Keyword 'void' for functions without return value</summary>
+        KeywordVoid,
+
+        /// <summary>Keyword 'bool' for boolean type</summary>
+        KeywordBool,
+
         // ==================== KEYWORDS - CONTROL FLOW ====================
 
         /// <summary>Keyword 'for' for loop</summary>
@@ -52,6 +58,29 @@ namespace CompilatorLFT.Models
         /// <summary>Keyword 'else' for alternative branch</summary>
         KeywordElse,
 
+        /// <summary>Keyword 'break' for exiting loops</summary>
+        KeywordBreak,
+
+        /// <summary>Keyword 'continue' for skipping to next iteration</summary>
+        KeywordContinue,
+
+        /// <summary>Keyword 'return' for returning from functions</summary>
+        KeywordReturn,
+
+        // ==================== KEYWORDS - FUNCTIONS ====================
+
+        /// <summary>Keyword 'function' for function declarations</summary>
+        KeywordFunction,
+
+        /// <summary>Keyword 'print' for output (Grigoraș 6.5)</summary>
+        KeywordPrint,
+
+        /// <summary>Keyword 'true' for boolean literal</summary>
+        KeywordTrue,
+
+        /// <summary>Keyword 'false' for boolean literal</summary>
+        KeywordFalse,
+
         // ==================== ARITHMETIC OPERATORS ====================
 
         /// <summary>Addition operator '+' or unary plus</summary>
@@ -65,6 +94,45 @@ namespace CompilatorLFT.Models
 
         /// <summary>Division operator '/'</summary>
         Slash,
+
+        /// <summary>Modulo operator '%'</summary>
+        Percent,
+
+        // ==================== INCREMENT/DECREMENT ====================
+
+        /// <summary>Increment operator '++'</summary>
+        PlusPlus,
+
+        /// <summary>Decrement operator '--'</summary>
+        MinusMinus,
+
+        // ==================== COMPOUND ASSIGNMENT ====================
+
+        /// <summary>Add-assign operator '+='</summary>
+        PlusEqual,
+
+        /// <summary>Subtract-assign operator '-='</summary>
+        MinusEqual,
+
+        /// <summary>Multiply-assign operator '*='</summary>
+        StarEqual,
+
+        /// <summary>Divide-assign operator '/='</summary>
+        SlashEqual,
+
+        /// <summary>Modulo-assign operator '%='</summary>
+        PercentEqual,
+
+        // ==================== LOGICAL OPERATORS ====================
+
+        /// <summary>Logical AND operator '&&'</summary>
+        LogicalAnd,
+
+        /// <summary>Logical OR operator '||'</summary>
+        LogicalOr,
+
+        /// <summary>Logical NOT operator '!'</summary>
+        LogicalNot,
 
         // ==================== RELATIONAL OPERATORS ====================
 
@@ -109,6 +177,15 @@ namespace CompilatorLFT.Models
         /// <summary>Close brace '}'</summary>
         CloseBrace,
 
+        /// <summary>Open bracket '['</summary>
+        OpenBracket,
+
+        /// <summary>Close bracket ']'</summary>
+        CloseBracket,
+
+        /// <summary>Colon ':'</summary>
+        Colon,
+
         // ==================== SPECIAL ====================
 
         /// <summary>Whitespace (ignored in parsing)</summary>
@@ -143,6 +220,21 @@ namespace CompilatorLFT.Models
         /// <summary>Node for string literal expression</summary>
         StringExpression,
 
+        /// <summary>Node for boolean literal expression</summary>
+        BooleanExpression,
+
+        /// <summary>Node for logical expression (&&, ||)</summary>
+        LogicalExpression,
+
+        /// <summary>Node for function call expression</summary>
+        FunctionCallExpression,
+
+        /// <summary>Node for array access expression (arr[i])</summary>
+        ArrayAccessExpression,
+
+        /// <summary>Node for increment/decrement expression</summary>
+        IncrementExpression,
+
         // ==================== AST NODES - STATEMENTS ====================
 
         /// <summary>Node for declaration statement (e.g.: int a, b=5;)</summary>
@@ -165,6 +257,21 @@ namespace CompilatorLFT.Models
 
         /// <summary>Node for block of statements between braces</summary>
         Block,
+
+        /// <summary>Node for print statement (Grigoraș 6.5)</summary>
+        PrintStatement,
+
+        /// <summary>Node for break statement</summary>
+        BreakStatement,
+
+        /// <summary>Node for continue statement</summary>
+        ContinueStatement,
+
+        /// <summary>Node for return statement</summary>
+        ReturnStatement,
+
+        /// <summary>Node for function declaration</summary>
+        FunctionDeclaration,
 
         /// <summary>Root node for complete program</summary>
         Program
@@ -201,6 +308,12 @@ namespace CompilatorLFT.Models
 
         /// <summary>String type (string)</summary>
         String,
+
+        /// <summary>Boolean type (bool)</summary>
+        Bool,
+
+        /// <summary>Void type (void) - for functions without return value</summary>
+        Void,
 
         /// <summary>Undefined type or error</summary>
         Unknown
