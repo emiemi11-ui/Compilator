@@ -160,9 +160,9 @@ namespace CompilatorLFT.Core
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine("\n=== TAC ===");
                     Console.ResetColor();
-                    var tacGenerator = new ThreeAddressCodeGenerator(_symbolTable, _functions);
-                    tacGenerator.GenerateCode(program);
-                    tacGenerator.DisplayGeneratedCode();
+                    var tacGenerator = new ThreeAddressCodeGenerator();
+                    tacGenerator.Generate(program);
+                    tacGenerator.DisplayTAC();
                 }
 
                 // Evaluate
