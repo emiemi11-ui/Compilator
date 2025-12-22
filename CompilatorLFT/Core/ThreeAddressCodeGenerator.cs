@@ -4,6 +4,7 @@ using System.Text;
 using CompilatorLFT.Models;
 using CompilatorLFT.Models.Expressions;
 using CompilatorLFT.Models.Statements;
+using ProgramNode = CompilatorLFT.Models.Statements.Program;
 
 namespace CompilatorLFT.Core
 {
@@ -186,7 +187,7 @@ namespace CompilatorLFT.Core
         /// Generates TAC for a complete program.
         /// </summary>
         /// <param name="program">The parsed program</param>
-        public void Generate(Program program)
+        public void Generate(ProgramNode program)
         {
             _instructions.Clear();
             _tempCounter = 0;

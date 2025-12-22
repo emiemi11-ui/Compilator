@@ -4,6 +4,9 @@ using CompilatorLFT.Models;
 using CompilatorLFT.Models.Expressions;
 using CompilatorLFT.Models.Statements;
 
+// Type alias to avoid conflict with entry point Program class
+using ProgramNode = CompilatorLFT.Models.Statements.Program;
+
 namespace CompilatorLFT.Core.VM
 {
     /// <summary>
@@ -62,7 +65,7 @@ namespace CompilatorLFT.Core.VM
         /// </summary>
         /// <param name="program">The AST to compile</param>
         /// <returns>The compiled bytecode program</returns>
-        public BytecodeProgram Compile(Program program)
+        public BytecodeProgram Compile(ProgramNode program)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));

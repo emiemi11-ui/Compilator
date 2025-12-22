@@ -6,6 +6,9 @@ using CompilatorLFT.Models.Expressions;
 using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
 
+// Type alias to avoid conflict with entry point Program class
+using ProgramNode = CompilatorLFT.Models.Statements.Program;
+
 namespace CompilatorLFT.Core
 {
     /// <summary>
@@ -85,7 +88,7 @@ namespace CompilatorLFT.Core
         /// Analyzes the entire program for potential issues.
         /// </summary>
         /// <param name="program">The parsed program</param>
-        public void Analyze(Program program)
+        public void Analyze(ProgramNode program)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -132,7 +135,7 @@ namespace CompilatorLFT.Core
         /// <summary>
         /// Collects all declared variables and functions.
         /// </summary>
-        private void CollectDeclarations(Program program)
+        private void CollectDeclarations(ProgramNode program)
         {
             // Collect from symbol table
             foreach (var variable in _symbolTable.Variables)

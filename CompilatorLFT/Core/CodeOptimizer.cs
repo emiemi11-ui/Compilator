@@ -5,6 +5,9 @@ using CompilatorLFT.Models;
 using CompilatorLFT.Models.Expressions;
 using CompilatorLFT.Models.Statements;
 
+// Type alias to avoid conflict with entry point Program class
+using ProgramNode = CompilatorLFT.Models.Statements.Program;
+
 namespace CompilatorLFT.Core
 {
     /// <summary>
@@ -81,7 +84,7 @@ namespace CompilatorLFT.Core
         /// </summary>
         /// <param name="program">The program to optimize</param>
         /// <returns>The optimized program</returns>
-        public Program Optimize(Program program)
+        public ProgramNode Optimize(ProgramNode program)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));

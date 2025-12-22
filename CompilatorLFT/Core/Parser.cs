@@ -4,6 +4,7 @@ using CompilatorLFT.Models;
 using CompilatorLFT.Models.Expressions;
 using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
+using ProgramNode = CompilatorLFT.Models.Statements.Program;
 
 namespace CompilatorLFT.Core
 {
@@ -199,7 +200,7 @@ namespace CompilatorLFT.Core
         /// Parses the entire program.
         /// </summary>
         /// <returns>The syntax tree of the program</returns>
-        public Program ParseProgram()
+        public ProgramNode ParseProgram()
         {
             var statements = new List<Statement>();
             var functions = new List<FunctionDeclaration>();
@@ -236,7 +237,7 @@ namespace CompilatorLFT.Core
                 }
             }
 
-            return new Program(statements, functions);
+            return new ProgramNode(statements, functions);
         }
 
         /// <summary>
