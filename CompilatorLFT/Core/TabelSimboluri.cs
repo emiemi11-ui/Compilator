@@ -6,234 +6,234 @@ using CompilatorLFT.Utils;
 namespace CompilatorLFT.Core
 {
     /// <summary>
-    /// Gestioneaza tabelul de simboluri pentru variabile.
+    /// Manages the symbol table for variables.
     /// </summary>
     /// <remarks>
-    /// Referinta: Dragon Book, Cap. 2.7 - Symbol Tables
+    /// Reference: Dragon Book, Ch. 2.7 - Symbol Tables
     /// </remarks>
-    public class TabelSimboluri
+    public class SymbolTable
     {
-        #region Campuri private
+        #region Private Fields
 
-        private readonly Dictionary<string, Variabila> _variabile;
+        private readonly Dictionary<string, Variable> _variables;
 
         #endregion
 
-        #region Proprietati
+        #region Properties
 
-        /// <summary>Numarul de variabile din tabel.</summary>
-        public int NumarVariabile => _variabile.Count;
+        /// <summary>Number of variables in the table.</summary>
+        public int VariableCount => _variables.Count;
 
-        /// <summary>Toate variabilele din tabel.</summary>
-        public IEnumerable<Variabila> Variabile => _variabile.Values;
+        /// <summary>All variables in the table.</summary>
+        public IEnumerable<Variable> Variables => _variables.Values;
 
         #endregion
 
         #region Constructor
 
         /// <summary>
-        /// Initializeaza un nou tabel de simboluri gol.
+        /// Initializes a new empty symbol table.
         /// </summary>
-        public TabelSimboluri()
+        public SymbolTable()
         {
-            _variabile = new Dictionary<string, Variabila>();
+            _variables = new Dictionary<string, Variable>();
         }
 
         #endregion
 
-        #region Metode publice
+        #region Public Methods
 
         /// <summary>
-        /// Adauga o noua variabila in tabel.
+        /// Adds a new variable to the table.
         /// </summary>
-        /// <param name="nume">Numele variabilei</param>
-        /// <param name="tip">Tipul variabilei</param>
-        /// <param name="linie">Linia declaratiei</param>
-        /// <param name="coloana">Coloana declaratiei</param>
-        /// <param name="erori">Lista de erori pentru raportare</param>
-        /// <returns>True daca adaugarea a reusit, False daca exista deja</returns>
-        public bool Adauga(string nume, TipDat tip, int linie, int coloana, List<EroareCompilare> erori)
+        /// <param name="name">Variable name</param>
+        /// <param name="type">Variable type</param>
+        /// <param name="line">Declaration line</param>
+        /// <param name="column">Declaration column</param>
+        /// <param name="errors">Error list for reporting</param>
+        /// <returns>True if addition succeeded, False if already exists</returns>
+        public bool Add(string name, DataType type, int line, int column, List<CompilationError> errors)
         {
-            if (_variabile.ContainsKey(nume))
+            if (_variables.ContainsKey(name))
             {
-                erori.Add(EroareCompilare.Semantica(
-                    linie, coloana,
-                    $"declaratie duplicata pentru variabila '{nume}'"));
+                errors.Add(CompilationError.Semantic(
+                    line, column,
+                    $"duplicate declaration for variable '{name}'"));
                 return false;
             }
 
-            var variabila = new Variabila(nume, tip, linie, coloana);
-            _variabile[nume] = variabila;
+            var variable = new Variable(name, type, line, column);
+            _variables[name] = variable;
             return true;
         }
 
         /// <summary>
-        /// Verifica daca o variabila exista in tabel.
+        /// Checks if a variable exists in the table.
         /// </summary>
-        /// <param name="nume">Numele variabilei</param>
-        /// <returns>True daca exista, False altfel</returns>
-        public bool Exista(string nume)
+        /// <param name="name">Variable name</param>
+        /// <returns>True if exists, False otherwise</returns>
+        public bool Exists(string name)
         {
-            return _variabile.ContainsKey(nume);
+            return _variables.ContainsKey(name);
         }
 
         /// <summary>
-        /// Obtine o variabila din tabel.
+        /// Gets a variable from the table.
         /// </summary>
-        /// <param name="nume">Numele variabilei</param>
-        /// <returns>Variabila sau null daca nu exista</returns>
-        public Variabila Obtine(string nume)
+        /// <param name="name">Variable name</param>
+        /// <returns>Variable or null if not found</returns>
+        public Variable Get(string name)
         {
-            return _variabile.TryGetValue(nume, out var variabila) ? variabila : null;
+            return _variables.TryGetValue(name, out var variable) ? variable : null;
         }
 
         /// <summary>
-        /// Seteaza valoarea unei variabile cu validare de tip.
+        /// Sets the value of a variable with type validation.
         /// </summary>
-        /// <param name="nume">Numele variabilei</param>
-        /// <param name="valoare">Valoarea de setat</param>
-        /// <param name="linie">Linia pentru raportare erori</param>
-        /// <param name="coloana">Coloana pentru raportare erori</param>
-        /// <param name="erori">Lista de erori</param>
-        /// <returns>True daca setarea a reusit</returns>
-        public bool SeteazaValoare(string nume, object valoare, int linie, int coloana, List<EroareCompilare> erori)
+        /// <param name="name">Variable name</param>
+        /// <param name="value">Value to set</param>
+        /// <param name="line">Line for error reporting</param>
+        /// <param name="column">Column for error reporting</param>
+        /// <param name="errors">Error list</param>
+        /// <returns>True if setting succeeded</returns>
+        public bool SetValue(string name, object value, int line, int column, List<CompilationError> errors)
         {
-            if (!_variabile.ContainsKey(nume))
+            if (!_variables.ContainsKey(name))
             {
-                erori.Add(EroareCompilare.Semantica(
-                    linie, coloana,
-                    $"variabila '{nume}' nu a fost declarata"));
+                errors.Add(CompilationError.Semantic(
+                    line, column,
+                    $"variable '{name}' was not declared"));
                 return false;
             }
 
-            var variabila = _variabile[nume];
+            var variable = _variables[name];
 
-            // Verificare compatibilitate tip
-            if (!VerificaTipCompatibil(variabila.Tip, valoare))
+            // Check type compatibility
+            if (!CheckTypeCompatibility(variable.Type, value))
             {
-                string tipValoare = valoare?.GetType().Name ?? "null";
-                erori.Add(EroareCompilare.Semantica(
-                    linie, coloana,
-                    $"incompatibilitate tipuri: nu se poate atribui {tipValoare} la variabila de tip {variabila.Tip}"));
+                string valueType = value?.GetType().Name ?? "null";
+                errors.Add(CompilationError.Semantic(
+                    line, column,
+                    $"type mismatch: cannot assign {valueType} to variable of type {variable.Type}"));
                 return false;
             }
 
-            // Conversie daca e necesar
-            object valoareConvertita = ConvertesteLaTip(valoare, variabila.Tip);
+            // Convert if necessary
+            object convertedValue = ConvertToType(value, variable.Type);
 
-            variabila.SeteazaValoare(valoareConvertita);
+            variable.SetValue(convertedValue);
             return true;
         }
 
         /// <summary>
-        /// Obtine valoarea unei variabile cu verificare initializare.
+        /// Gets the value of a variable with initialization check.
         /// </summary>
-        /// <param name="nume">Numele variabilei</param>
-        /// <param name="linie">Linia pentru raportare erori</param>
-        /// <param name="coloana">Coloana pentru raportare erori</param>
-        /// <param name="erori">Lista de erori</param>
-        /// <returns>Valoarea sau null daca eroare</returns>
-        public object ObtineValoare(string nume, int linie, int coloana, List<EroareCompilare> erori)
+        /// <param name="name">Variable name</param>
+        /// <param name="line">Line for error reporting</param>
+        /// <param name="column">Column for error reporting</param>
+        /// <param name="errors">Error list</param>
+        /// <returns>Value or null if error</returns>
+        public object GetValue(string name, int line, int column, List<CompilationError> errors)
         {
-            if (!_variabile.ContainsKey(nume))
+            if (!_variables.ContainsKey(name))
             {
-                erori.Add(EroareCompilare.Semantica(
-                    linie, coloana,
-                    $"variabila '{nume}' nu a fost declarata"));
+                errors.Add(CompilationError.Semantic(
+                    line, column,
+                    $"variable '{name}' was not declared"));
                 return null;
             }
 
-            var variabila = _variabile[nume];
+            var variable = _variables[name];
 
-            if (!variabila.EsteInitializata)
+            if (!variable.IsInitialized)
             {
-                erori.Add(EroareCompilare.Semantica(
-                    linie, coloana,
-                    $"variabila '{nume}' folosita inainte de initializare"));
+                errors.Add(CompilationError.Semantic(
+                    line, column,
+                    $"variable '{name}' used before initialization"));
                 return null;
             }
 
-            return variabila.Valoare;
+            return variable.Value;
         }
 
         /// <summary>
-        /// Afiseaza toate variabilele la consola.
+        /// Displays all variables to console.
         /// </summary>
-        public void AfiseazaVariabile()
+        public void DisplayVariables()
         {
-            Console.WriteLine("\n=== TABEL SIMBOLURI ===");
+            Console.WriteLine("\n=== SYMBOL TABLE ===");
 
-            if (_variabile.Count == 0)
+            if (_variables.Count == 0)
             {
-                Console.WriteLine("(gol)");
+                Console.WriteLine("(empty)");
                 return;
             }
 
-            foreach (var variabila in _variabile.Values)
+            foreach (var variable in _variables.Values)
             {
-                Console.WriteLine(variabila.ToString());
+                Console.WriteLine(variable.ToString());
             }
         }
 
         /// <summary>
-        /// Reseteaza tabelul de simboluri.
+        /// Resets the symbol table.
         /// </summary>
-        public void Reseteaza()
+        public void Reset()
         {
-            _variabile.Clear();
+            _variables.Clear();
         }
 
         #endregion
 
-        #region Metode helper
+        #region Helper Methods
 
         /// <summary>
-        /// Verifica daca o valoare este compatibila cu un tip.
+        /// Checks if a value is compatible with a type.
         /// </summary>
-        private bool VerificaTipCompatibil(TipDat tip, object valoare)
+        private bool CheckTypeCompatibility(DataType type, object value)
         {
-            if (valoare == null)
+            if (value == null)
                 return false;
 
-            return tip switch
+            return type switch
             {
-                TipDat.Int => valoare is int || valoare is double,
-                TipDat.Double => valoare is int || valoare is double,
-                TipDat.String => valoare is string,
+                DataType.Int => value is int || value is double,
+                DataType.Double => value is int || value is double,
+                DataType.String => value is string,
                 _ => false
             };
         }
 
         /// <summary>
-        /// Converteste o valoare la tipul specificat.
+        /// Converts a value to the specified type.
         /// </summary>
-        private object ConvertesteLaTip(object valoare, TipDat tip)
+        private object ConvertToType(object value, DataType type)
         {
-            if (valoare == null)
+            if (value == null)
                 return null;
 
-            return tip switch
+            return type switch
             {
-                TipDat.Int when valoare is int i => i,
-                TipDat.Int when valoare is double d => (int)d,
-                TipDat.Double when valoare is double d => d,
-                TipDat.Double when valoare is int i => (double)i,
-                TipDat.String when valoare is string s => s,
-                _ => valoare
+                DataType.Int when value is int i => i,
+                DataType.Int when value is double d => (int)d,
+                DataType.Double when value is double d => d,
+                DataType.Double when value is int i => (double)i,
+                DataType.String when value is string s => s,
+                _ => value
             };
         }
 
         /// <summary>
-        /// Converteste un tip atom lexical la tip de date.
+        /// Converts a token type to data type.
         /// </summary>
-        public static TipDat ConvertesteLaTipDat(TipAtomLexical tip)
+        public static DataType ConvertToDataType(TokenType type)
         {
-            return tip switch
+            return type switch
             {
-                TipAtomLexical.CuvantCheieInt => TipDat.Int,
-                TipAtomLexical.CuvantCheieDouble => TipDat.Double,
-                TipAtomLexical.CuvantCheieString => TipDat.String,
-                _ => TipDat.Necunoscut
+                TokenType.KeywordInt => DataType.Int,
+                TokenType.KeywordDouble => DataType.Double,
+                TokenType.KeywordString => DataType.String,
+                _ => DataType.Unknown
             };
         }
 

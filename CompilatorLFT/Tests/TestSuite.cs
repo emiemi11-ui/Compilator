@@ -7,447 +7,447 @@ using CompilatorLFT.Models;
 namespace CompilatorLFT.Tests
 {
     /// <summary>
-    /// Suite de teste automate pentru compilator.
-    /// Contine 25+ teste pentru toate componentele.
+    /// Automated test suite for the compiler.
+    /// Contains 25+ tests for all components.
     /// </summary>
     public static class TestSuite
     {
-        private static int _testeReusute;
-        private static int _testeTotal;
+        private static int _passedTests;
+        private static int _totalTests;
 
         #region Entry Point
 
         /// <summary>
-        /// Ruleaza toate testele si afiseaza raportul.
+        /// Runs all tests and displays the report.
         /// </summary>
-        public static void RuleazaToateTestele()
+        public static void RunAllTests()
         {
             Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║              SUITE TESTE AUTOMATE - COMPILATOR LFT         ║");
+            Console.WriteLine("║             AUTOMATED TEST SUITE - LFT COMPILER            ║");
             Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
 
-            _testeReusute = 0;
-            _testeTotal = 0;
+            _passedTests = 0;
+            _totalTests = 0;
 
-            // Teste Lexer
+            // Lexer Tests
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("═══ TESTE LEXER ═══");
+            Console.WriteLine("=== LEXER TESTS ===");
             Console.ResetColor();
-            RuleazaTesteLexer();
+            RunLexerTests();
 
-            // Teste Parser
+            // Parser Tests
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("\n═══ TESTE PARSER ═══");
+            Console.WriteLine("\n=== PARSER TESTS ===");
             Console.ResetColor();
-            RuleazaTesteParser();
+            RunParserTests();
 
-            // Teste Evaluator
+            // Evaluator Tests
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("\n═══ TESTE EVALUATOR ═══");
+            Console.WriteLine("\n=== EVALUATOR TESTS ===");
             Console.ResetColor();
-            RuleazaTesteEvaluator();
+            RunEvaluatorTests();
 
-            // Teste Integrare
+            // Integration Tests
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("\n═══ TESTE INTEGRARE ═══");
+            Console.WriteLine("\n=== INTEGRATION TESTS ===");
             Console.ResetColor();
-            RuleazaTesteIntegrare();
+            RunIntegrationTests();
 
-            // Teste Erori
+            // Error Detection Tests
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("\n═══ TESTE DETECTARE ERORI ═══");
+            Console.WriteLine("\n=== ERROR DETECTION TESTS ===");
             Console.ResetColor();
-            RuleazaTesteErori();
+            RunErrorDetectionTests();
 
-            // Raport final
-            AfiseazaRaportFinal();
+            // Final Report
+            DisplayFinalReport();
         }
 
         #endregion
 
-        #region Teste Lexer
+        #region Lexer Tests
 
-        static void RuleazaTesteLexer()
+        static void RunLexerTests()
         {
-            // Test 1: Declaratie simpla
-            Test("Lexer: Declaratie simpla", () =>
+            // Test 1: Simple declaration
+            Test("Lexer: Simple declaration", () =>
             {
                 var lexer = new Lexer("int a;");
-                var tokeni = lexer.Tokenizeaza();
+                var tokens = lexer.Tokenize();
 
-                return tokeni.Count == 4 && // int, a, ;, EOF
-                       tokeni[0].Tip == TipAtomLexical.CuvantCheieInt &&
-                       tokeni[1].Tip == TipAtomLexical.Identificator &&
-                       tokeni[2].Tip == TipAtomLexical.PunctVirgula &&
-                       lexer.Erori.Count == 0;
+                return tokens.Count == 4 && // int, a, ;, EOF
+                       tokens[0].Type == TokenType.KeywordInt &&
+                       tokens[1].Type == TokenType.Identifier &&
+                       tokens[2].Type == TokenType.Semicolon &&
+                       lexer.Errors.Count == 0;
             });
 
-            // Test 2: Numere intregi si zecimale
-            Test("Lexer: Numere intregi si zecimale", () =>
+            // Test 2: Integers and decimals
+            Test("Lexer: Integers and decimals", () =>
             {
                 var lexer = new Lexer("42 3.14");
-                var tokeni = lexer.Tokenizeaza();
+                var tokens = lexer.Tokenize();
 
-                return tokeni.Count == 3 &&
-                       tokeni[0].Tip == TipAtomLexical.NumarIntreg &&
-                       (int)tokeni[0].Valoare == 42 &&
-                       tokeni[1].Tip == TipAtomLexical.NumarZecimal &&
-                       Math.Abs((double)tokeni[1].Valoare - 3.14) < 0.001;
+                return tokens.Count == 3 &&
+                       tokens[0].Type == TokenType.IntegerNumber &&
+                       (int)tokens[0].Value == 42 &&
+                       tokens[1].Type == TokenType.DecimalNumber &&
+                       Math.Abs((double)tokens[1].Value - 3.14) < 0.001;
             });
 
             // Test 3: String literal
             Test("Lexer: String literal", () =>
             {
                 var lexer = new Lexer("\"hello world\"");
-                var tokeni = lexer.Tokenizeaza();
+                var tokens = lexer.Tokenize();
 
-                return tokeni.Count == 2 &&
-                       tokeni[0].Tip == TipAtomLexical.StringLiteral &&
-                       (string)tokeni[0].Valoare == "hello world";
+                return tokens.Count == 2 &&
+                       tokens[0].Type == TokenType.StringLiteral &&
+                       (string)tokens[0].Value == "hello world";
             });
 
-            // Test 4: Operatori relationali
-            Test("Lexer: Operatori relationali", () =>
+            // Test 4: Relational operators
+            Test("Lexer: Relational operators", () =>
             {
                 var lexer = new Lexer("<= >= == !=");
-                var tokeni = lexer.Tokenizeaza();
+                var tokens = lexer.Tokenize();
 
-                return tokeni[0].Tip == TipAtomLexical.MaiMicEgal &&
-                       tokeni[1].Tip == TipAtomLexical.MaiMareEgal &&
-                       tokeni[2].Tip == TipAtomLexical.EgalEgal &&
-                       tokeni[3].Tip == TipAtomLexical.Diferit;
+                return tokens[0].Type == TokenType.LessThanOrEqual &&
+                       tokens[1].Type == TokenType.GreaterThanOrEqual &&
+                       tokens[2].Type == TokenType.EqualEqual &&
+                       tokens[3].Type == TokenType.NotEqual;
             });
 
-            // Test 5: Cuvinte cheie
-            Test("Lexer: Cuvinte cheie", () =>
+            // Test 5: Keywords
+            Test("Lexer: Keywords", () =>
             {
                 var lexer = new Lexer("int double string for while if else");
-                var tokeni = lexer.Tokenizeaza();
+                var tokens = lexer.Tokenize();
 
-                return tokeni[0].Tip == TipAtomLexical.CuvantCheieInt &&
-                       tokeni[1].Tip == TipAtomLexical.CuvantCheieDouble &&
-                       tokeni[2].Tip == TipAtomLexical.CuvantCheieString &&
-                       tokeni[3].Tip == TipAtomLexical.CuvantCheieFor &&
-                       tokeni[4].Tip == TipAtomLexical.CuvantCheieWhile &&
-                       tokeni[5].Tip == TipAtomLexical.CuvantCheieIf &&
-                       tokeni[6].Tip == TipAtomLexical.CuvantCheieElse;
+                return tokens[0].Type == TokenType.KeywordInt &&
+                       tokens[1].Type == TokenType.KeywordDouble &&
+                       tokens[2].Type == TokenType.KeywordString &&
+                       tokens[3].Type == TokenType.KeywordFor &&
+                       tokens[4].Type == TokenType.KeywordWhile &&
+                       tokens[5].Type == TokenType.KeywordIf &&
+                       tokens[6].Type == TokenType.KeywordElse;
             });
 
-            // Test 6: Tracking linie/coloana
-            Test("Lexer: Tracking linie/coloana", () =>
+            // Test 6: Line/column tracking
+            Test("Lexer: Line/column tracking", () =>
             {
                 var lexer = new Lexer("int a;\na = 5;");
-                var tokeni = lexer.Tokenizeaza();
+                var tokens = lexer.Tokenize();
 
-                // 'a' de pe linia 2 trebuie sa aiba Linie == 2
-                var aLinia2 = tokeni.FirstOrDefault(t =>
-                    t.Tip == TipAtomLexical.Identificator && t.Linie == 2);
+                // 'a' on line 2 should have Line == 2
+                var aLine2 = tokens.FirstOrDefault(t =>
+                    t.Type == TokenType.Identifier && t.Line == 2);
 
-                return aLinia2 != null && aLinia2.Coloana == 1;
+                return aLine2 != null && aLine2.Column == 1;
             });
         }
 
         #endregion
 
-        #region Teste Parser
+        #region Parser Tests
 
-        static void RuleazaTesteParser()
+        static void RunParserTests()
         {
-            // Test 7: Declaratie cu initializare
-            Test("Parser: Declaratie cu initializare", () =>
+            // Test 7: Declaration with initialization
+            Test("Parser: Declaration with initialization", () =>
             {
                 var parser = new Parser("int a = 5;");
-                var program = parser.ParseazaProgram();
+                var program = parser.ParseProgram();
 
-                return program.Instructiuni.Count == 1 &&
-                       parser.Erori.Count == 0 &&
-                       parser.TabelSimboluri.Exista("a");
+                return program.Statements.Count == 1 &&
+                       parser.Errors.Count == 0 &&
+                       parser.SymbolTable.Exists("a");
             });
 
-            // Test 8: Declaratii multiple
-            Test("Parser: Declaratii multiple", () =>
+            // Test 8: Multiple declarations
+            Test("Parser: Multiple declarations", () =>
             {
                 var parser = new Parser("int a, b = 3, c;");
-                var program = parser.ParseazaProgram();
+                var program = parser.ParseProgram();
 
-                return parser.TabelSimboluri.Exista("a") &&
-                       parser.TabelSimboluri.Exista("b") &&
-                       parser.TabelSimboluri.Exista("c") &&
-                       parser.Erori.Count == 0;
+                return parser.SymbolTable.Exists("a") &&
+                       parser.SymbolTable.Exists("b") &&
+                       parser.SymbolTable.Exists("c") &&
+                       parser.Errors.Count == 0;
             });
 
-            // Test 9: Precedenta operatori
-            Test("Parser: Precedenta operatori", () =>
+            // Test 9: Operator precedence
+            Test("Parser: Operator precedence", () =>
             {
                 var parser = new Parser("3 + 4 * 5;");
-                var program = parser.ParseazaProgram();
+                var program = parser.ParseProgram();
 
-                // AST-ul trebuie sa aiba * ca copil al +
-                return program.Instructiuni.Count == 1 &&
-                       parser.Erori.Count == 0;
+                // AST should have * as child of +
+                return program.Statements.Count == 1 &&
+                       parser.Errors.Count == 0;
             });
 
-            // Test 10: Paranteze
-            Test("Parser: Paranteze schimba precedenta", () =>
+            // Test 10: Parentheses
+            Test("Parser: Parentheses change precedence", () =>
             {
                 var parser = new Parser("(3 + 4) * 5;");
-                var program = parser.ParseazaProgram();
+                var program = parser.ParseProgram();
 
-                return program.Instructiuni.Count == 1 &&
-                       parser.Erori.Count == 0;
+                return program.Statements.Count == 1 &&
+                       parser.Errors.Count == 0;
             });
 
-            // Test 11: Structura FOR
-            Test("Parser: Structura FOR", () =>
+            // Test 11: FOR structure
+            Test("Parser: FOR structure", () =>
             {
                 var parser = new Parser("for (int i = 0; i < 10; i = i + 1) { }");
-                var program = parser.ParseazaProgram();
+                var program = parser.ParseProgram();
 
-                return program.Instructiuni.Count == 1 &&
-                       parser.TabelSimboluri.Exista("i") &&
-                       parser.Erori.Count == 0;
+                return program.Statements.Count == 1 &&
+                       parser.SymbolTable.Exists("i") &&
+                       parser.Errors.Count == 0;
             });
 
-            // Test 12: Structura WHILE
-            Test("Parser: Structura WHILE", () =>
+            // Test 12: WHILE structure
+            Test("Parser: WHILE structure", () =>
             {
                 var parser = new Parser("int x = 5; while (x > 0) { x = x - 1; }");
-                var program = parser.ParseazaProgram();
+                var program = parser.ParseProgram();
 
-                return program.Instructiuni.Count == 2 &&
-                       parser.Erori.Count == 0;
+                return program.Statements.Count == 2 &&
+                       parser.Errors.Count == 0;
             });
 
-            // Test 13: Structura IF-ELSE
-            Test("Parser: Structura IF-ELSE", () =>
+            // Test 13: IF-ELSE structure
+            Test("Parser: IF-ELSE structure", () =>
             {
                 var parser = new Parser("int a = 5; if (a > 3) { a = 10; } else { a = 0; }");
-                var program = parser.ParseazaProgram();
+                var program = parser.ParseProgram();
 
-                return program.Instructiuni.Count == 2 &&
-                       parser.Erori.Count == 0;
+                return program.Statements.Count == 2 &&
+                       parser.Errors.Count == 0;
             });
         }
 
         #endregion
 
-        #region Teste Evaluator
+        #region Evaluator Tests
 
-        static void RuleazaTesteEvaluator()
+        static void RunEvaluatorTests()
         {
-            // Test 14: Evaluare expresie simpla
-            Test("Evaluator: Expresie simpla", () =>
+            // Test 14: Simple expression evaluation
+            Test("Evaluator: Simple expression", () =>
             {
                 var parser = new Parser("int a = 5; int b = a + 3;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var b = parser.TabelSimboluri.Obtine("b");
-                return b != null && b.EsteInitializata && (int)b.Valoare == 8;
+                var b = parser.SymbolTable.Get("b");
+                return b != null && b.IsInitialized && (int)b.Value == 8;
             });
 
-            // Test 15: Precedenta operatori in evaluare
-            Test("Evaluator: Precedenta operatori", () =>
+            // Test 15: Operator precedence in evaluation
+            Test("Evaluator: Operator precedence", () =>
             {
                 var parser = new Parser("int a = 3 + 4 * 5;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var a = parser.TabelSimboluri.Obtine("a");
-                return a != null && (int)a.Valoare == 23; // 3 + 20 = 23
+                var a = parser.SymbolTable.Get("a");
+                return a != null && (int)a.Value == 23; // 3 + 20 = 23
             });
 
-            // Test 16: Conversie int -> double
-            Test("Evaluator: Conversie int -> double", () =>
+            // Test 16: Int -> double conversion
+            Test("Evaluator: Int -> double conversion", () =>
             {
                 var parser = new Parser("int a = 5; double b = 2.5; double c = a + b;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var c = parser.TabelSimboluri.Obtine("c");
-                return c != null && Math.Abs((double)c.Valoare - 7.5) < 0.001;
+                var c = parser.SymbolTable.Get("c");
+                return c != null && Math.Abs((double)c.Value - 7.5) < 0.001;
             });
 
-            // Test 17: Truncare double -> int
-            Test("Evaluator: Truncare double -> int", () =>
+            // Test 17: Double -> int truncation
+            Test("Evaluator: Double -> int truncation", () =>
             {
                 var parser = new Parser("double x = 7.8; int a = x;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var a = parser.TabelSimboluri.Obtine("a");
-                return a != null && (int)a.Valoare == 7;
+                var a = parser.SymbolTable.Get("a");
+                return a != null && (int)a.Value == 7;
             });
 
-            // Test 18: Concatenare string
-            Test("Evaluator: Concatenare string", () =>
+            // Test 18: String concatenation
+            Test("Evaluator: String concatenation", () =>
             {
                 var parser = new Parser("string s1 = \"hello\"; string s2 = \" world\"; string s3 = s1 + s2;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var s3 = parser.TabelSimboluri.Obtine("s3");
-                return s3 != null && (string)s3.Valoare == "hello world";
+                var s3 = parser.SymbolTable.Get("s3");
+                return s3 != null && (string)s3.Value == "hello world";
             });
 
-            // Test 19: Minus unar
-            Test("Evaluator: Minus unar", () =>
+            // Test 19: Unary minus
+            Test("Evaluator: Unary minus", () =>
             {
                 var parser = new Parser("int a = -5; int b = -a;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var a = parser.TabelSimboluri.Obtine("a");
-                var b = parser.TabelSimboluri.Obtine("b");
-                return (int)a.Valoare == -5 && (int)b.Valoare == 5;
+                var a = parser.SymbolTable.Get("a");
+                var b = parser.SymbolTable.Get("b");
+                return (int)a.Value == -5 && (int)b.Value == 5;
             });
         }
 
         #endregion
 
-        #region Teste Integrare
+        #region Integration Tests
 
-        static void RuleazaTesteIntegrare()
+        static void RunIntegrationTests()
         {
-            // Test 20: FOR simplu
-            Test("Integrare: FOR cu suma", () =>
+            // Test 20: Simple FOR
+            Test("Integration: FOR with sum", () =>
             {
                 var parser = new Parser("int sum = 0; for (int i = 0; i < 5; i = i + 1) { sum = sum + i; }");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var sum = parser.TabelSimboluri.Obtine("sum");
-                return sum != null && (int)sum.Valoare == 10; // 0+1+2+3+4
+                var sum = parser.SymbolTable.Get("sum");
+                return sum != null && (int)sum.Value == 10; // 0+1+2+3+4
             });
 
             // Test 21: WHILE
-            Test("Integrare: WHILE cu contor", () =>
+            Test("Integration: WHILE with counter", () =>
             {
                 var parser = new Parser("int i = 0; int sum = 0; while (i < 5) { sum = sum + i; i = i + 1; }");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var sum = parser.TabelSimboluri.Obtine("sum");
-                var i = parser.TabelSimboluri.Obtine("i");
-                return (int)sum.Valoare == 10 && (int)i.Valoare == 5;
+                var sum = parser.SymbolTable.Get("sum");
+                var i = parser.SymbolTable.Get("i");
+                return (int)sum.Value == 10 && (int)i.Value == 5;
             });
 
-            // Test 22: IF cu conditie adevarata
-            Test("Integrare: IF conditie adevarata", () =>
+            // Test 22: IF with true condition
+            Test("Integration: IF true condition", () =>
             {
                 var parser = new Parser("int a = 5; int b = 0; if (a > 3) { b = 10; }");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var b = parser.TabelSimboluri.Obtine("b");
-                return (int)b.Valoare == 10;
+                var b = parser.SymbolTable.Get("b");
+                return (int)b.Value == 10;
             });
 
-            // Test 23: IF-ELSE cu conditie falsa
-            Test("Integrare: IF-ELSE conditie falsa", () =>
+            // Test 23: IF-ELSE with false condition
+            Test("Integration: IF-ELSE false condition", () =>
             {
                 var parser = new Parser("int a = 2; int b = 0; if (a > 3) { b = 10; } else { b = 20; }");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var b = parser.TabelSimboluri.Obtine("b");
-                return (int)b.Valoare == 20;
+                var b = parser.SymbolTable.Get("b");
+                return (int)b.Value == 20;
             });
 
-            // Test 24: Operatori relationali
-            Test("Integrare: Operatori relationali", () =>
+            // Test 24: Relational operators
+            Test("Integration: Relational operators", () =>
             {
                 var parser = new Parser("int a = 5; int b = 3; int r = 0; if (a >= b) { r = 1; }");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                var r = parser.TabelSimboluri.Obtine("r");
-                return (int)r.Valoare == 1;
+                var r = parser.SymbolTable.Get("r");
+                return (int)r.Value == 1;
             });
         }
 
         #endregion
 
-        #region Teste Erori
+        #region Error Detection Tests
 
-        static void RuleazaTesteErori()
+        static void RunErrorDetectionTests()
         {
-            // Test 25: Variabila nedeclarata
-            Test("Eroare: Variabila nedeclarata", () =>
+            // Test 25: Undeclared variable
+            Test("Error: Undeclared variable", () =>
             {
                 var parser = new Parser("x = 5;");
-                parser.ParseazaProgram();
+                parser.ParseProgram();
 
-                return parser.Erori.Any(e =>
-                    e.Tip == TipEroare.Semantica &&
-                    e.Mesaj.Contains("nu a fost declarata"));
+                return parser.Errors.Any(e =>
+                    e.Type == ErrorType.Semantic &&
+                    e.Message.Contains("was not declared"));
             });
 
-            // Test 26: Declaratie duplicata
-            Test("Eroare: Declaratie duplicata", () =>
+            // Test 26: Duplicate declaration
+            Test("Error: Duplicate declaration", () =>
             {
                 var parser = new Parser("int a; int a;");
-                parser.ParseazaProgram();
+                parser.ParseProgram();
 
-                return parser.Erori.Any(e =>
-                    e.Tip == TipEroare.Semantica &&
-                    e.Mesaj.Contains("duplicata"));
+                return parser.Errors.Any(e =>
+                    e.Type == ErrorType.Semantic &&
+                    e.Message.Contains("duplicate"));
             });
 
-            // Test 27: Plus unar (interzis)
-            Test("Eroare: Plus unar nu este permis", () =>
+            // Test 27: Unary plus (forbidden)
+            Test("Error: Unary plus not allowed", () =>
             {
                 var parser = new Parser("int a = +5;");
-                parser.ParseazaProgram();
+                parser.ParseProgram();
 
-                return parser.Erori.Any(e =>
-                    e.Mesaj.Contains("plus unar"));
+                return parser.Errors.Any(e =>
+                    e.Message.Contains("unary plus"));
             });
 
-            // Test 28: Impartire la zero
-            Test("Eroare: Impartire la zero", () =>
+            // Test 28: Division by zero
+            Test("Error: Division by zero", () =>
             {
                 var parser = new Parser("int a = 5; int b = 0; int c = a / b;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                return evaluator.Erori.Any(e =>
-                    e.Mesaj.Contains("impartire la zero"));
+                return evaluator.Errors.Any(e =>
+                    e.Message.Contains("division by zero"));
             });
 
-            // Test 29: String cu numar (incompatibil)
-            Test("Eroare: String + numar incompatibil", () =>
+            // Test 29: String with number (incompatible)
+            Test("Error: String + number incompatible", () =>
             {
                 var parser = new Parser("string s = \"test\"; int n = 5; string r = s + n;");
-                var program = parser.ParseazaProgram();
-                var evaluator = new Evaluator(parser.TabelSimboluri);
-                evaluator.ExecutaProgram(program);
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator(parser.SymbolTable);
+                evaluator.ExecuteProgram(program);
 
-                return evaluator.Erori.Any(e =>
-                    e.Mesaj.Contains("incompatibilitate"));
+                return evaluator.Errors.Any(e =>
+                    e.Message.Contains("mismatch"));
             });
 
-            // Test 30: String neînchis
-            Test("Eroare: String neinchis", () =>
+            // Test 30: Unclosed string
+            Test("Error: Unclosed string", () =>
             {
                 var lexer = new Lexer("string s = \"hello");
-                lexer.Tokenizeaza();
+                lexer.Tokenize();
 
-                return lexer.Erori.Any(e =>
-                    e.Tip == TipEroare.Lexicala &&
-                    e.Mesaj.Contains("neinchis"));
+                return lexer.Errors.Any(e =>
+                    e.Type == ErrorType.Lexical &&
+                    e.Message.Contains("unclosed"));
             });
         }
 
@@ -455,56 +455,56 @@ namespace CompilatorLFT.Tests
 
         #region Helper Methods
 
-        static void Test(string nume, Func<bool> testFunc)
+        static void Test(string name, Func<bool> testFunc)
         {
-            _testeTotal++;
+            _totalTests++;
 
             try
             {
-                bool rezultat = testFunc();
+                bool result = testFunc();
 
-                if (rezultat)
+                if (result)
                 {
-                    _testeReusute++;
+                    _passedTests++;
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"  ✓ {nume}");
+                    Console.WriteLine($"  PASS: {name}");
                 }
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"  ✗ {nume} (rezultat neasteptat)");
+                    Console.WriteLine($"  FAIL: {name} (unexpected result)");
                 }
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"  ✗ {nume} (exceptie: {ex.Message})");
+                Console.WriteLine($"  FAIL: {name} (exception: {ex.Message})");
             }
 
             Console.ResetColor();
         }
 
-        static void AfiseazaRaportFinal()
+        static void DisplayFinalReport()
         {
-            Console.WriteLine("\n" + new string('═', 60));
+            Console.WriteLine("\n" + new string('=', 60));
 
-            double procent = (double)_testeReusute / _testeTotal * 100;
+            double percent = (double)_passedTests / _totalTests * 100;
 
-            Console.WriteLine($"RAPORT FINAL: {_testeReusute}/{_testeTotal} teste reusute ({procent:F0}%)");
+            Console.WriteLine($"FINAL REPORT: {_passedTests}/{_totalTests} tests passed ({percent:F0}%)");
 
-            if (_testeReusute == _testeTotal)
+            if (_passedTests == _totalTests)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\n✓ TOATE TESTELE AU TRECUT CU SUCCES!");
+                Console.WriteLine("\nALL TESTS PASSED SUCCESSFULLY!");
             }
             else
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"\n⚠ {_testeTotal - _testeReusute} teste au esuat");
+                Console.WriteLine($"\n{_totalTests - _passedTests} tests failed");
             }
 
             Console.ResetColor();
-            Console.WriteLine(new string('═', 60));
+            Console.WriteLine(new string('=', 60));
         }
 
         #endregion

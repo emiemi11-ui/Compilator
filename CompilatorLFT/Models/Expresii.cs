@@ -2,199 +2,199 @@ using System;
 using System.Collections.Generic;
 using CompilatorLFT.Models;
 
-namespace CompilatorLFT.Models.Expresii
+namespace CompilatorLFT.Models.Expressions
 {
     /// <summary>
-    /// Clasa abstractă de bază pentru toate expresiile.
+    /// Abstract base class for all expressions.
     /// </summary>
     /// <remarks>
-    /// O expresie este un construct care evaluează la o valoare.
-    /// Exemple: 5, a+b, "hello", (x*y)+z
+    /// An expression is a construct that evaluates to a value.
+    /// Examples: 5, a+b, "hello", (x*y)+z
     /// </remarks>
-    public abstract class Expresie : NodSintactic
+    public abstract class Expression : SyntaxNode
     {
     }
 
-    #region Expresii Simple
+    #region Simple Expressions
 
     /// <summary>
-    /// Expresie pentru un literal numeric (întreg sau zecimal).
+    /// Expression for a numeric literal (integer or decimal).
     /// </summary>
     /// <example>
     /// 42, 3.14, -17
     /// </example>
-    public sealed class ExpresieNumerica : Expresie
+    public sealed class NumericExpression : Expression
     {
-        /// <summary>Atomul lexical care conține valoarea numerică.</summary>
-        public AtomLexical Numar { get; }
+        /// <summary>The lexical token containing the numeric value.</summary>
+        public Token Number { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.ExpresieNumerica;
+        public override TokenType Type => TokenType.NumericExpression;
 
-        public ExpresieNumerica(AtomLexical numar)
+        public NumericExpression(Token number)
         {
-            Numar = numar ?? throw new ArgumentNullException(nameof(numar));
-            
-            if (numar.Tip != TipAtomLexical.NumarIntreg && 
-                numar.Tip != TipAtomLexical.NumarZecimal)
+            Number = number ?? throw new ArgumentNullException(nameof(number));
+
+            if (number.Type != TokenType.IntegerNumber &&
+                number.Type != TokenType.DecimalNumber)
             {
                 throw new ArgumentException(
-                    "Atomul trebuie să fie NumarIntreg sau NumarZecimal", 
-                    nameof(numar));
+                    "Token must be IntegerNumber or DecimalNumber",
+                    nameof(number));
             }
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return Numar;
+            yield return Number;
         }
     }
 
     /// <summary>
-    /// Expresie pentru un literal string.
+    /// Expression for a string literal.
     /// </summary>
     /// <example>
     /// "hello", "test 123", ""
     /// </example>
-    public sealed class ExpresieString : Expresie
+    public sealed class StringExpression : Expression
     {
-        /// <summary>Atomul lexical care conține valoarea string.</summary>
-        public AtomLexical ValoareString { get; }
+        /// <summary>The lexical token containing the string value.</summary>
+        public Token StringValue { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.ExpresieString;
+        public override TokenType Type => TokenType.StringExpression;
 
-        public ExpresieString(AtomLexical valoareString)
+        public StringExpression(Token stringValue)
         {
-            ValoareString = valoareString ?? throw new ArgumentNullException(nameof(valoareString));
-            
-            if (valoareString.Tip != TipAtomLexical.StringLiteral)
+            StringValue = stringValue ?? throw new ArgumentNullException(nameof(stringValue));
+
+            if (stringValue.Type != TokenType.StringLiteral)
             {
                 throw new ArgumentException(
-                    "Atomul trebuie să fie StringLiteral", 
-                    nameof(valoareString));
+                    "Token must be StringLiteral",
+                    nameof(stringValue));
             }
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return ValoareString;
+            yield return StringValue;
         }
     }
 
     /// <summary>
-    /// Expresie pentru un identificator (variabilă).
+    /// Expression for an identifier (variable).
     /// </summary>
     /// <example>
-    /// a, suma, _temp, var123
+    /// a, sum, _temp, var123
     /// </example>
-    public sealed class ExpresieIdentificator : Expresie
+    public sealed class IdentifierExpression : Expression
     {
-        /// <summary>Atomul lexical care conține numele variabilei.</summary>
-        public AtomLexical Identificator { get; }
+        /// <summary>The lexical token containing the variable name.</summary>
+        public Token Identifier { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.ExpresieIdentificator;
+        public override TokenType Type => TokenType.IdentifierExpression;
 
-        public ExpresieIdentificator(AtomLexical identificator)
+        public IdentifierExpression(Token identifier)
         {
-            Identificator = identificator ?? throw new ArgumentNullException(nameof(identificator));
-            
-            if (identificator.Tip != TipAtomLexical.Identificator)
+            Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+
+            if (identifier.Type != TokenType.Identifier)
             {
                 throw new ArgumentException(
-                    "Atomul trebuie să fie Identificator", 
-                    nameof(identificator));
+                    "Token must be Identifier",
+                    nameof(identifier));
             }
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return Identificator;
+            yield return Identifier;
         }
     }
 
     #endregion
 
-    #region Expresii Compuse
+    #region Compound Expressions
 
     /// <summary>
-    /// Expresie binară (cu doi operanzi și un operator).
+    /// Binary expression (with two operands and an operator).
     /// </summary>
     /// <remarks>
-    /// Operatori suportați:
-    /// - Aritmetici: +, -, *, /
-    /// - Relaționali: &lt;, &gt;, &lt;=, &gt;=, ==, !=
-    /// 
-    /// Exemple: a+b, 3*5, x&lt;=y
+    /// Supported operators:
+    /// - Arithmetic: +, -, *, /
+    /// - Relational: &lt;, &gt;, &lt;=, &gt;=, ==, !=
+    ///
+    /// Examples: a+b, 3*5, x&lt;=y
     /// </remarks>
-    public sealed class ExpresieBinara : Expresie
+    public sealed class BinaryExpression : Expression
     {
-        /// <summary>Expresia din stânga operatorului.</summary>
-        public Expresie Stanga { get; }
+        /// <summary>The expression on the left of the operator.</summary>
+        public Expression Left { get; }
 
-        /// <summary>Operatorul binar (+, -, *, /, &lt;, &gt;, etc.).</summary>
-        public AtomLexical Operator { get; }
+        /// <summary>The binary operator (+, -, *, /, &lt;, &gt;, etc.).</summary>
+        public Token Operator { get; }
 
-        /// <summary>Expresia din dreapta operatorului.</summary>
-        public Expresie Dreapta { get; }
+        /// <summary>The expression on the right of the operator.</summary>
+        public Expression Right { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.ExpresieBinara;
+        public override TokenType Type => TokenType.BinaryExpression;
 
-        public ExpresieBinara(Expresie stanga, AtomLexical operatorAtom, Expresie dreapta)
+        public BinaryExpression(Expression left, Token operatorToken, Expression right)
         {
-            Stanga = stanga ?? throw new ArgumentNullException(nameof(stanga));
-            Operator = operatorAtom ?? throw new ArgumentNullException(nameof(operatorAtom));
-            Dreapta = dreapta ?? throw new ArgumentNullException(nameof(dreapta));
+            Left = left ?? throw new ArgumentNullException(nameof(left));
+            Operator = operatorToken ?? throw new ArgumentNullException(nameof(operatorToken));
+            Right = right ?? throw new ArgumentNullException(nameof(right));
 
-            // Validare: operator trebuie să fie aritmetic sau relațional
-            if (!operatorAtom.EsteOperatorAritmetic() && !operatorAtom.EsteOperatorRelational())
+            // Validation: operator must be arithmetic or relational
+            if (!operatorToken.IsArithmeticOperator() && !operatorToken.IsRelationalOperator())
             {
                 throw new ArgumentException(
-                    "Operatorul trebuie să fie aritmetic sau relațional",
-                    nameof(operatorAtom));
+                    "Operator must be arithmetic or relational",
+                    nameof(operatorToken));
             }
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return Stanga;
+            yield return Left;
             yield return Operator;
-            yield return Dreapta;
+            yield return Right;
         }
     }
 
     /// <summary>
-    /// Expresie unară (un operator și un operand).
+    /// Unary expression (one operator and one operand).
     /// </summary>
     /// <remarks>
-    /// Operatori suportați:
-    /// - Minus unar: -a, -(x+y)
-    /// 
-    /// NOTĂ: Plus unar (+a) NU este suportat conform cerințelor.
+    /// Supported operators:
+    /// - Unary minus: -a, -(x+y)
+    ///
+    /// NOTE: Unary plus (+a) is NOT supported as per requirements.
     /// </remarks>
-    public sealed class ExpresieUnara : Expresie
+    public sealed class UnaryExpression : Expression
     {
-        /// <summary>Operatorul unar (doar -).</summary>
-        public AtomLexical Operator { get; }
+        /// <summary>The unary operator (only -).</summary>
+        public Token Operator { get; }
 
-        /// <summary>Expresia la care se aplică operatorul.</summary>
-        public Expresie Operand { get; }
+        /// <summary>The expression to which the operator is applied.</summary>
+        public Expression Operand { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.ExpresieUnara;
+        public override TokenType Type => TokenType.UnaryExpression;
 
-        public ExpresieUnara(AtomLexical operatorAtom, Expresie operand)
+        public UnaryExpression(Token operatorToken, Expression operand)
         {
-            Operator = operatorAtom ?? throw new ArgumentNullException(nameof(operatorAtom));
+            Operator = operatorToken ?? throw new ArgumentNullException(nameof(operatorToken));
             Operand = operand ?? throw new ArgumentNullException(nameof(operand));
 
-            // Validare: doar minus unar este permis
-            if (operatorAtom.Tip != TipAtomLexical.Minus)
+            // Validation: only unary minus is allowed
+            if (operatorToken.Type != TokenType.Minus)
             {
                 throw new ArgumentException(
-                    "Doar operatorul minus (-) este suportat ca operator unar",
-                    nameof(operatorAtom));
+                    "Only minus operator (-) is supported as unary operator",
+                    nameof(operatorToken));
             }
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
             yield return Operator;
             yield return Operand;
@@ -202,56 +202,56 @@ namespace CompilatorLFT.Models.Expresii
     }
 
     /// <summary>
-    /// Expresie cu paranteze pentru forțarea precedenței.
+    /// Parenthesized expression for forcing precedence.
     /// </summary>
     /// <example>
     /// (a + b), (3 * (x + y))
     /// </example>
-    public sealed class ExpresieCuParanteze : Expresie
+    public sealed class ParenthesizedExpression : Expression
     {
-        /// <summary>Paranteza deschisă '('.</summary>
-        public AtomLexical ParantezaDeschisa { get; }
+        /// <summary>Open parenthesis '('.</summary>
+        public Token OpenParen { get; }
 
-        /// <summary>Expresia din interiorul parantezelor.</summary>
-        public Expresie Expresie { get; }
+        /// <summary>The expression inside the parentheses.</summary>
+        public Expression Expression { get; }
 
-        /// <summary>Paranteza închisă ')'.</summary>
-        public AtomLexical ParantezaInchisa { get; }
+        /// <summary>Close parenthesis ')'.</summary>
+        public Token CloseParen { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.ExpresieCuParanteze;
+        public override TokenType Type => TokenType.ParenthesizedExpression;
 
-        public ExpresieCuParanteze(
-            AtomLexical parantezaDeschisa,
-            Expresie expresie,
-            AtomLexical parantezaInchisa)
+        public ParenthesizedExpression(
+            Token openParen,
+            Expression expression,
+            Token closeParen)
         {
-            ParantezaDeschisa = parantezaDeschisa ?? 
-                throw new ArgumentNullException(nameof(parantezaDeschisa));
-            Expresie = expresie ?? 
-                throw new ArgumentNullException(nameof(expresie));
-            ParantezaInchisa = parantezaInchisa ?? 
-                throw new ArgumentNullException(nameof(parantezaInchisa));
+            OpenParen = openParen ??
+                throw new ArgumentNullException(nameof(openParen));
+            Expression = expression ??
+                throw new ArgumentNullException(nameof(expression));
+            CloseParen = closeParen ??
+                throw new ArgumentNullException(nameof(closeParen));
 
-            if (parantezaDeschisa.Tip != TipAtomLexical.ParantezaDeschisa)
+            if (openParen.Type != TokenType.OpenParen)
             {
                 throw new ArgumentException(
-                    "Primul atom trebuie să fie ParantezaDeschisa",
-                    nameof(parantezaDeschisa));
+                    "First token must be OpenParen",
+                    nameof(openParen));
             }
 
-            if (parantezaInchisa.Tip != TipAtomLexical.ParantezaInchisa)
+            if (closeParen.Type != TokenType.CloseParen)
             {
                 throw new ArgumentException(
-                    "Al treilea atom trebuie să fie ParantezaInchisa",
-                    nameof(parantezaInchisa));
+                    "Third token must be CloseParen",
+                    nameof(closeParen));
             }
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return ParantezaDeschisa;
-            yield return Expresie;
-            yield return ParantezaInchisa;
+            yield return OpenParen;
+            yield return Expression;
+            yield return CloseParen;
         }
     }
 

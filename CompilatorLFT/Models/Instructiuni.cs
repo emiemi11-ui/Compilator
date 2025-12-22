@@ -1,349 +1,349 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CompilatorLFT.Models.Expresii;
+using CompilatorLFT.Models.Expressions;
 
-namespace CompilatorLFT.Models.Instructiuni
+namespace CompilatorLFT.Models.Statements
 {
     /// <summary>
-    /// Clasa abstracta de baza pentru toate instructiunile.
+    /// Abstract base class for all statements.
     /// </summary>
     /// <remarks>
-    /// Referinta: Dragon Book, Cap. 5 - Syntax-Directed Translation
+    /// Reference: Dragon Book, Ch. 5 - Syntax-Directed Translation
     /// </remarks>
-    public abstract class Instructiune : NodSintactic
+    public abstract class Statement : SyntaxNode
     {
     }
 
     /// <summary>
-    /// Instructiune de declaratie de variabile.
-    /// Sintaxa: int a, b=5, c;
-    ///          double x=3.14;
-    ///          string s="test";
+    /// Variable declaration statement.
+    /// Syntax: int a, b=5, c;
+    ///         double x=3.14;
+    ///         string s="test";
     /// </summary>
-    public sealed class InstructiuneDeclaratie : Instructiune
+    public sealed class DeclarationStatement : Statement
     {
-        /// <summary>Cuvantul cheie pentru tip (int/double/string).</summary>
-        public AtomLexical TipCuvantCheie { get; }
+        /// <summary>The type keyword (int/double/string).</summary>
+        public Token TypeKeyword { get; }
 
         /// <summary>
-        /// Lista declaratii: (identificator, expresie_initializare_optionala)
-        /// Daca expresie este null -> declaratie fara initializare
+        /// List of declarations: (identifier, optional_init_expression)
+        /// If expression is null -> declaration without initialization
         /// </summary>
-        public List<(AtomLexical identificator, Expresie expresieInit)> Declaratii { get; }
+        public List<(Token identifier, Expression initExpression)> Declarations { get; }
 
-        /// <summary>Punct si virgula final.</summary>
-        public AtomLexical PunctVirgula { get; }
+        /// <summary>Final semicolon.</summary>
+        public Token Semicolon { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.InstructiuneDeclaratie;
+        public override TokenType Type => TokenType.DeclarationStatement;
 
-        public InstructiuneDeclaratie(
-            AtomLexical tipCuvantCheie,
-            List<(AtomLexical, Expresie)> declaratii,
-            AtomLexical punctVirgula)
+        public DeclarationStatement(
+            Token typeKeyword,
+            List<(Token, Expression)> declarations,
+            Token semicolon)
         {
-            TipCuvantCheie = tipCuvantCheie ?? throw new ArgumentNullException(nameof(tipCuvantCheie));
-            Declaratii = declaratii ?? throw new ArgumentNullException(nameof(declaratii));
-            PunctVirgula = punctVirgula ?? throw new ArgumentNullException(nameof(punctVirgula));
+            TypeKeyword = typeKeyword ?? throw new ArgumentNullException(nameof(typeKeyword));
+            Declarations = declarations ?? throw new ArgumentNullException(nameof(declarations));
+            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
 
-            if (!tipCuvantCheie.EsteCuvantCheieTip())
-                throw new ArgumentException("Trebuie sa fie cuvant cheie pentru tip (int/double/string)");
+            if (!typeKeyword.IsTypeKeyword())
+                throw new ArgumentException("Must be type keyword (int/double/string)");
 
-            if (declaratii.Count == 0)
-                throw new ArgumentException("Trebuie sa existe cel putin o declaratie");
+            if (declarations.Count == 0)
+                throw new ArgumentException("At least one declaration must exist");
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return TipCuvantCheie;
+            yield return TypeKeyword;
 
-            foreach (var (id, expr) in Declaratii)
+            foreach (var (id, expr) in Declarations)
             {
                 yield return id;
                 if (expr != null)
                     yield return expr;
             }
 
-            yield return PunctVirgula;
+            yield return Semicolon;
         }
     }
 
     /// <summary>
-    /// Instructiune de atribuire.
-    /// Sintaxa: a = expresie;
+    /// Assignment statement.
+    /// Syntax: a = expression;
     /// </summary>
-    public sealed class InstructiuneAtribuire : Instructiune
+    public sealed class AssignmentStatement : Statement
     {
-        /// <summary>Identificatorul variabilei.</summary>
-        public AtomLexical Identificator { get; }
+        /// <summary>The variable identifier.</summary>
+        public Token Identifier { get; }
 
-        /// <summary>Operatorul de atribuire '='.</summary>
-        public AtomLexical OperatorEgal { get; }
+        /// <summary>The assignment operator '='.</summary>
+        public Token AssignOperator { get; }
 
-        /// <summary>Expresia care se evalueaza si se atribuie.</summary>
-        public Expresie Expresie { get; }
+        /// <summary>The expression that is evaluated and assigned.</summary>
+        public Expression Expression { get; }
 
-        /// <summary>Punct si virgula final (poate fi null in for).</summary>
-        public AtomLexical PunctVirgula { get; }
+        /// <summary>Final semicolon (can be null in for).</summary>
+        public Token Semicolon { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.InstructiuneAtribuire;
+        public override TokenType Type => TokenType.AssignmentStatement;
 
-        public InstructiuneAtribuire(
-            AtomLexical identificator,
-            AtomLexical operatorEgal,
-            Expresie expresie,
-            AtomLexical punctVirgula)
+        public AssignmentStatement(
+            Token identifier,
+            Token assignOperator,
+            Expression expression,
+            Token semicolon)
         {
-            Identificator = identificator ?? throw new ArgumentNullException(nameof(identificator));
-            OperatorEgal = operatorEgal ?? throw new ArgumentNullException(nameof(operatorEgal));
-            Expresie = expresie ?? throw new ArgumentNullException(nameof(expresie));
-            PunctVirgula = punctVirgula; // Poate fi null in for
+            Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+            AssignOperator = assignOperator ?? throw new ArgumentNullException(nameof(assignOperator));
+            Expression = expression ?? throw new ArgumentNullException(nameof(expression));
+            Semicolon = semicolon; // Can be null in for
 
-            if (identificator.Tip != TipAtomLexical.Identificator)
-                throw new ArgumentException("Trebuie sa fie identificator");
+            if (identifier.Type != TokenType.Identifier)
+                throw new ArgumentException("Must be identifier");
 
-            if (operatorEgal.Tip != TipAtomLexical.Egal)
-                throw new ArgumentException("Trebuie sa fie operator '='");
+            if (assignOperator.Type != TokenType.Equal)
+                throw new ArgumentException("Must be assignment operator '='");
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return Identificator;
-            yield return OperatorEgal;
-            yield return Expresie;
-            if (PunctVirgula != null)
-                yield return PunctVirgula;
+            yield return Identifier;
+            yield return AssignOperator;
+            yield return Expression;
+            if (Semicolon != null)
+                yield return Semicolon;
         }
     }
 
     /// <summary>
-    /// Instructiune care consta doar dintr-o expresie.
-    /// Sintaxa: expresie;
+    /// Statement that consists only of an expression.
+    /// Syntax: expression;
     /// </summary>
-    public sealed class InstructiuneExpresie : Instructiune
+    public sealed class ExpressionStatement : Statement
     {
-        /// <summary>Expresia evaluata.</summary>
-        public Expresie Expresie { get; }
+        /// <summary>The evaluated expression.</summary>
+        public Expression Expression { get; }
 
-        /// <summary>Punct si virgula final.</summary>
-        public AtomLexical PunctVirgula { get; }
+        /// <summary>Final semicolon.</summary>
+        public Token Semicolon { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.InstructiuneExpresie;
+        public override TokenType Type => TokenType.ExpressionStatement;
 
-        public InstructiuneExpresie(Expresie expresie, AtomLexical punctVirgula)
+        public ExpressionStatement(Expression expression, Token semicolon)
         {
-            Expresie = expresie ?? throw new ArgumentNullException(nameof(expresie));
-            PunctVirgula = punctVirgula ?? throw new ArgumentNullException(nameof(punctVirgula));
+            Expression = expression ?? throw new ArgumentNullException(nameof(expression));
+            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return Expresie;
-            yield return PunctVirgula;
+            yield return Expression;
+            yield return Semicolon;
         }
     }
 
     /// <summary>
-    /// Instructiune FOR.
-    /// Sintaxa: for (init; conditie; increment) instructiune
+    /// FOR statement.
+    /// Syntax: for (init; condition; increment) statement
     /// </summary>
-    public sealed class InstructiuneFor : Instructiune
+    public sealed class ForStatement : Statement
     {
-        public AtomLexical CuvantCheieFor { get; }
-        public AtomLexical ParantezaDeschisa { get; }
+        public Token ForKeyword { get; }
+        public Token OpenParen { get; }
 
-        /// <summary>Instructiune initializare (ex: int i=0).</summary>
-        public Instructiune Initializare { get; }
+        /// <summary>Initialization statement (e.g.: int i=0).</summary>
+        public Statement Initialization { get; }
 
-        /// <summary>Expresie conditie (ex: i&lt;10).</summary>
-        public Expresie Conditie { get; }
+        /// <summary>Condition expression (e.g.: i&lt;10).</summary>
+        public Expression Condition { get; }
 
-        public AtomLexical PunctVirgula { get; }
+        public Token Semicolon { get; }
 
-        /// <summary>Instructiune increment (ex: i=i+1).</summary>
-        public Instructiune Increment { get; }
+        /// <summary>Increment statement (e.g.: i=i+1).</summary>
+        public Statement Increment { get; }
 
-        public AtomLexical ParantezaInchisa { get; }
+        public Token CloseParen { get; }
 
-        /// <summary>Corp buclei (poate fi instructiune simpla sau bloc).</summary>
-        public Instructiune Corp { get; }
+        /// <summary>Loop body (can be simple statement or block).</summary>
+        public Statement Body { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.InstructiuneFor;
+        public override TokenType Type => TokenType.ForStatement;
 
-        public InstructiuneFor(
-            AtomLexical cuvantCheieFor,
-            AtomLexical parantezaDeschisa,
-            Instructiune initializare,
-            Expresie conditie,
-            AtomLexical punctVirgula,
-            Instructiune increment,
-            AtomLexical parantezaInchisa,
-            Instructiune corp)
+        public ForStatement(
+            Token forKeyword,
+            Token openParen,
+            Statement initialization,
+            Expression condition,
+            Token semicolon,
+            Statement increment,
+            Token closeParen,
+            Statement body)
         {
-            CuvantCheieFor = cuvantCheieFor ?? throw new ArgumentNullException(nameof(cuvantCheieFor));
-            ParantezaDeschisa = parantezaDeschisa ?? throw new ArgumentNullException(nameof(parantezaDeschisa));
-            Initializare = initializare;
-            Conditie = conditie;
-            PunctVirgula = punctVirgula ?? throw new ArgumentNullException(nameof(punctVirgula));
+            ForKeyword = forKeyword ?? throw new ArgumentNullException(nameof(forKeyword));
+            OpenParen = openParen ?? throw new ArgumentNullException(nameof(openParen));
+            Initialization = initialization;
+            Condition = condition;
+            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
             Increment = increment;
-            ParantezaInchisa = parantezaInchisa ?? throw new ArgumentNullException(nameof(parantezaInchisa));
-            Corp = corp ?? throw new ArgumentNullException(nameof(corp));
+            CloseParen = closeParen ?? throw new ArgumentNullException(nameof(closeParen));
+            Body = body ?? throw new ArgumentNullException(nameof(body));
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return CuvantCheieFor;
-            yield return ParantezaDeschisa;
-            if (Initializare != null) yield return Initializare;
-            if (Conditie != null) yield return Conditie;
-            yield return PunctVirgula;
+            yield return ForKeyword;
+            yield return OpenParen;
+            if (Initialization != null) yield return Initialization;
+            if (Condition != null) yield return Condition;
+            yield return Semicolon;
             if (Increment != null) yield return Increment;
-            yield return ParantezaInchisa;
-            yield return Corp;
+            yield return CloseParen;
+            yield return Body;
         }
     }
 
     /// <summary>
-    /// Instructiune WHILE.
-    /// Sintaxa: while (conditie) instructiune
+    /// WHILE statement.
+    /// Syntax: while (condition) statement
     /// </summary>
-    public sealed class InstructiuneWhile : Instructiune
+    public sealed class WhileStatement : Statement
     {
-        public AtomLexical CuvantCheieWhile { get; }
-        public AtomLexical ParantezaDeschisa { get; }
-        public Expresie Conditie { get; }
-        public AtomLexical ParantezaInchisa { get; }
-        public Instructiune Corp { get; }
+        public Token WhileKeyword { get; }
+        public Token OpenParen { get; }
+        public Expression Condition { get; }
+        public Token CloseParen { get; }
+        public Statement Body { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.InstructiuneWhile;
+        public override TokenType Type => TokenType.WhileStatement;
 
-        public InstructiuneWhile(
-            AtomLexical cuvantCheieWhile,
-            AtomLexical parantezaDeschisa,
-            Expresie conditie,
-            AtomLexical parantezaInchisa,
-            Instructiune corp)
+        public WhileStatement(
+            Token whileKeyword,
+            Token openParen,
+            Expression condition,
+            Token closeParen,
+            Statement body)
         {
-            CuvantCheieWhile = cuvantCheieWhile ?? throw new ArgumentNullException(nameof(cuvantCheieWhile));
-            ParantezaDeschisa = parantezaDeschisa ?? throw new ArgumentNullException(nameof(parantezaDeschisa));
-            Conditie = conditie ?? throw new ArgumentNullException(nameof(conditie));
-            ParantezaInchisa = parantezaInchisa ?? throw new ArgumentNullException(nameof(parantezaInchisa));
-            Corp = corp ?? throw new ArgumentNullException(nameof(corp));
+            WhileKeyword = whileKeyword ?? throw new ArgumentNullException(nameof(whileKeyword));
+            OpenParen = openParen ?? throw new ArgumentNullException(nameof(openParen));
+            Condition = condition ?? throw new ArgumentNullException(nameof(condition));
+            CloseParen = closeParen ?? throw new ArgumentNullException(nameof(closeParen));
+            Body = body ?? throw new ArgumentNullException(nameof(body));
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return CuvantCheieWhile;
-            yield return ParantezaDeschisa;
-            yield return Conditie;
-            yield return ParantezaInchisa;
-            yield return Corp;
+            yield return WhileKeyword;
+            yield return OpenParen;
+            yield return Condition;
+            yield return CloseParen;
+            yield return Body;
         }
     }
 
     /// <summary>
-    /// Instructiune IF (cu else optional).
-    /// Sintaxa: if (conditie) instructiune [else instructiune]
+    /// IF statement (with optional else).
+    /// Syntax: if (condition) statement [else statement]
     /// </summary>
-    public sealed class InstructiuneIf : Instructiune
+    public sealed class IfStatement : Statement
     {
-        public AtomLexical CuvantCheieIf { get; }
-        public AtomLexical ParantezaDeschisa { get; }
-        public Expresie Conditie { get; }
-        public AtomLexical ParantezaInchisa { get; }
-        public Instructiune CorpAdevarat { get; }
+        public Token IfKeyword { get; }
+        public Token OpenParen { get; }
+        public Expression Condition { get; }
+        public Token CloseParen { get; }
+        public Statement ThenBody { get; }
 
         // Optional
-        public AtomLexical CuvantCheieElse { get; }
-        public Instructiune CorpFals { get; }
+        public Token ElseKeyword { get; }
+        public Statement ElseBody { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.InstructiuneIf;
+        public override TokenType Type => TokenType.IfStatement;
 
-        public InstructiuneIf(
-            AtomLexical cuvantCheieIf,
-            AtomLexical parantezaDeschisa,
-            Expresie conditie,
-            AtomLexical parantezaInchisa,
-            Instructiune corpAdevarat,
-            AtomLexical cuvantCheieElse = null,
-            Instructiune corpFals = null)
+        public IfStatement(
+            Token ifKeyword,
+            Token openParen,
+            Expression condition,
+            Token closeParen,
+            Statement thenBody,
+            Token elseKeyword = null,
+            Statement elseBody = null)
         {
-            CuvantCheieIf = cuvantCheieIf ?? throw new ArgumentNullException(nameof(cuvantCheieIf));
-            ParantezaDeschisa = parantezaDeschisa ?? throw new ArgumentNullException(nameof(parantezaDeschisa));
-            Conditie = conditie ?? throw new ArgumentNullException(nameof(conditie));
-            ParantezaInchisa = parantezaInchisa ?? throw new ArgumentNullException(nameof(parantezaInchisa));
-            CorpAdevarat = corpAdevarat ?? throw new ArgumentNullException(nameof(corpAdevarat));
-            CuvantCheieElse = cuvantCheieElse;
-            CorpFals = corpFals;
+            IfKeyword = ifKeyword ?? throw new ArgumentNullException(nameof(ifKeyword));
+            OpenParen = openParen ?? throw new ArgumentNullException(nameof(openParen));
+            Condition = condition ?? throw new ArgumentNullException(nameof(condition));
+            CloseParen = closeParen ?? throw new ArgumentNullException(nameof(closeParen));
+            ThenBody = thenBody ?? throw new ArgumentNullException(nameof(thenBody));
+            ElseKeyword = elseKeyword;
+            ElseBody = elseBody;
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return CuvantCheieIf;
-            yield return ParantezaDeschisa;
-            yield return Conditie;
-            yield return ParantezaInchisa;
-            yield return CorpAdevarat;
+            yield return IfKeyword;
+            yield return OpenParen;
+            yield return Condition;
+            yield return CloseParen;
+            yield return ThenBody;
 
-            if (CuvantCheieElse != null)
+            if (ElseKeyword != null)
             {
-                yield return CuvantCheieElse;
-                yield return CorpFals;
+                yield return ElseKeyword;
+                yield return ElseBody;
             }
         }
     }
 
     /// <summary>
-    /// Bloc de instructiuni intre acolade.
-    /// Sintaxa: { instructiune1; instructiune2; ... }
+    /// Block of statements between braces.
+    /// Syntax: { statement1; statement2; ... }
     /// </summary>
-    public sealed class Bloc : Instructiune
+    public sealed class BlockStatement : Statement
     {
-        public AtomLexical AcoladaDeschisa { get; }
-        public List<Instructiune> Instructiuni { get; }
-        public AtomLexical AcoladaInchisa { get; }
+        public Token OpenBrace { get; }
+        public List<Statement> Statements { get; }
+        public Token CloseBrace { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.Bloc;
+        public override TokenType Type => TokenType.Block;
 
-        public Bloc(
-            AtomLexical acoladaDeschisa,
-            List<Instructiune> instructiuni,
-            AtomLexical acoladaInchisa)
+        public BlockStatement(
+            Token openBrace,
+            List<Statement> statements,
+            Token closeBrace)
         {
-            AcoladaDeschisa = acoladaDeschisa ?? throw new ArgumentNullException(nameof(acoladaDeschisa));
-            Instructiuni = instructiuni ?? new List<Instructiune>();
-            AcoladaInchisa = acoladaInchisa ?? throw new ArgumentNullException(nameof(acoladaInchisa));
+            OpenBrace = openBrace ?? throw new ArgumentNullException(nameof(openBrace));
+            Statements = statements ?? new List<Statement>();
+            CloseBrace = closeBrace ?? throw new ArgumentNullException(nameof(closeBrace));
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            yield return AcoladaDeschisa;
+            yield return OpenBrace;
 
-            foreach (var instr in Instructiuni)
-                yield return instr;
+            foreach (var stmt in Statements)
+                yield return stmt;
 
-            yield return AcoladaInchisa;
+            yield return CloseBrace;
         }
     }
 
     /// <summary>
-    /// Nod radacina - programul complet.
-    /// Contine lista tuturor instructiunilor de la nivel superior.
+    /// Root node - the complete program.
+    /// Contains the list of all top-level statements.
     /// </summary>
-    public sealed class ProgramComplet : NodSintactic
+    public sealed class Program : SyntaxNode
     {
-        public List<Instructiune> Instructiuni { get; }
+        public List<Statement> Statements { get; }
 
-        public override TipAtomLexical Tip => TipAtomLexical.Program;
+        public override TokenType Type => TokenType.Program;
 
-        public ProgramComplet(List<Instructiune> instructiuni)
+        public Program(List<Statement> statements)
         {
-            Instructiuni = instructiuni ?? new List<Instructiune>();
+            Statements = statements ?? new List<Statement>();
         }
 
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            return Instructiuni.Cast<NodSintactic>();
+            return Statements.Cast<SyntaxNode>();
         }
     }
 }

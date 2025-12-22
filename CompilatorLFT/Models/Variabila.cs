@@ -4,224 +4,224 @@ using CompilatorLFT.Models;
 namespace CompilatorLFT.Models
 {
     /// <summary>
-    /// Reprezintă o variabilă în tabelul de simboluri.
+    /// Represents a variable in the symbol table.
     /// </summary>
     /// <remarks>
-    /// Referință: Dragon Book, Cap. 2.7 - "Symbol Tables"
-    /// 
-    /// Tabelul de simboluri stochează informații despre fiecare identificator declarat:
-    /// - Nume (identificator)
-    /// - Tip (int, double, string)
-    /// - Valoare curentă
-    /// - Dacă a fost inițializată
-    /// - Locația declarației (pentru erori)
+    /// Reference: Dragon Book, Ch. 2.7 - "Symbol Tables"
+    ///
+    /// The symbol table stores information about each declared identifier:
+    /// - Name (identifier)
+    /// - Type (int, double, string)
+    /// - Current value
+    /// - Whether it has been initialized
+    /// - Declaration location (for errors)
     /// </remarks>
-    public class Variabila
+    public class Variable
     {
-        #region Proprietăți
+        #region Properties
 
         /// <summary>
-        /// Numele variabilei (identificatorul).
+        /// The variable name (identifier).
         /// </summary>
-        public string Nume { get; }
+        public string Name { get; }
 
         /// <summary>
-        /// Tipul variabilei (int, double, string).
+        /// The variable type (int, double, string).
         /// </summary>
-        public TipDat Tip { get; }
+        public DataType Type { get; }
 
         /// <summary>
-        /// Valoarea curentă a variabilei.
+        /// The current value of the variable.
         /// </summary>
         /// <remarks>
-        /// Poate fi:
-        /// - int pentru TipDat.Int
-        /// - double pentru TipDat.Double
-        /// - string pentru TipDat.String
-        /// - null dacă neinițializată
+        /// Can be:
+        /// - int for DataType.Int
+        /// - double for DataType.Double
+        /// - string for DataType.String
+        /// - null if uninitialized
         /// </remarks>
-        public object Valoare { get; set; }
+        public object Value { get; set; }
 
         /// <summary>
-        /// Indică dacă variabila a fost inițializată cu o valoare.
+        /// Indicates whether the variable has been initialized with a value.
         /// </summary>
-        public bool EsteInitializata { get; set; }
+        public bool IsInitialized { get; set; }
 
         /// <summary>
-        /// Linia unde a fost declarată variabila (pentru erori).
+        /// The line where the variable was declared (for errors).
         /// </summary>
-        public int LinieDeclaratie { get; }
+        public int DeclarationLine { get; }
 
         /// <summary>
-        /// Coloana unde a fost declarată variabila (pentru erori).
+        /// The column where the variable was declared (for errors).
         /// </summary>
-        public int ColoanaDeclaratie { get; }
+        public int DeclarationColumn { get; }
 
         #endregion
 
-        #region Constructori
+        #region Constructors
 
         /// <summary>
-        /// Inițializează o nouă variabilă nedeclarată.
+        /// Initializes a new uninitialized variable.
         /// </summary>
-        /// <param name="nume">Numele variabilei</param>
-        /// <param name="tip">Tipul variabilei</param>
-        /// <param name="linie">Linia declarației</param>
-        /// <param name="coloana">Coloana declarației</param>
+        /// <param name="name">Variable name</param>
+        /// <param name="type">Variable type</param>
+        /// <param name="line">Declaration line</param>
+        /// <param name="column">Declaration column</param>
         /// <exception cref="ArgumentException">
-        /// Dacă numele este gol sau tipul este necunoscut
+        /// If name is empty or type is unknown
         /// </exception>
-        public Variabila(string nume, TipDat tip, int linie, int coloana)
+        public Variable(string name, DataType type, int line, int column)
         {
-            if (string.IsNullOrWhiteSpace(nume))
-                throw new ArgumentException("Numele variabilei nu poate fi gol", nameof(nume));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Variable name cannot be empty", nameof(name));
 
-            if (tip == TipDat.Necunoscut)
-                throw new ArgumentException("Tipul variabilei trebuie să fie valid", nameof(tip));
+            if (type == DataType.Unknown)
+                throw new ArgumentException("Variable type must be valid", nameof(type));
 
-            Nume = nume;
-            Tip = tip;
-            Valoare = null;
-            EsteInitializata = false;
-            LinieDeclaratie = linie;
-            ColoanaDeclaratie = coloana;
+            Name = name;
+            Type = type;
+            Value = null;
+            IsInitialized = false;
+            DeclarationLine = line;
+            DeclarationColumn = column;
         }
 
         /// <summary>
-        /// Inițializează o nouă variabilă cu valoare inițială.
+        /// Initializes a new variable with an initial value.
         /// </summary>
-        /// <param name="nume">Numele variabilei</param>
-        /// <param name="tip">Tipul variabilei</param>
-        /// <param name="valoare">Valoarea inițială</param>
-        /// <param name="linie">Linia declarației</param>
-        /// <param name="coloana">Coloana declarației</param>
-        public Variabila(string nume, TipDat tip, object valoare, int linie, int coloana)
-            : this(nume, tip, linie, coloana)
+        /// <param name="name">Variable name</param>
+        /// <param name="type">Variable type</param>
+        /// <param name="value">Initial value</param>
+        /// <param name="line">Declaration line</param>
+        /// <param name="column">Declaration column</param>
+        public Variable(string name, DataType type, object value, int line, int column)
+            : this(name, type, line, column)
         {
-            SeteazaValoare(valoare);
+            SetValue(value);
         }
 
         #endregion
 
-        #region Metode publice
+        #region Public Methods
 
         /// <summary>
-        /// Setează valoarea variabilei cu validare de tip.
+        /// Sets the variable value with type validation.
         /// </summary>
-        /// <param name="valoare">Noua valoare</param>
+        /// <param name="value">The new value</param>
         /// <exception cref="ArgumentException">
-        /// Dacă valoarea nu corespunde tipului variabilei
+        /// If value does not match the variable type
         /// </exception>
-        public void SeteazaValoare(object valoare)
+        public void SetValue(object value)
         {
-            // Validare tip
-            if (!ValidareaTipului(valoare))
+            // Type validation
+            if (!ValidateType(value))
             {
                 throw new ArgumentException(
-                    $"Valoarea de tip '{valoare?.GetType().Name ?? "null"}' " +
-                    $"nu corespunde tipului variabilei '{Tip}'",
-                    nameof(valoare));
+                    $"Value of type '{value?.GetType().Name ?? "null"}' " +
+                    $"does not match variable type '{Type}'",
+                    nameof(value));
             }
 
-            Valoare = valoare;
-            EsteInitializata = true;
+            Value = value;
+            IsInitialized = true;
         }
 
         /// <summary>
-        /// Verifică dacă o valoare este compatibilă cu tipul variabilei.
+        /// Checks if a value is compatible with the variable type.
         /// </summary>
-        /// <param name="valoare">Valoarea de verificat</param>
-        /// <returns>True dacă compatibil, False altfel</returns>
-        public bool ValidareaTipului(object valoare)
+        /// <param name="value">The value to check</param>
+        /// <returns>True if compatible, False otherwise</returns>
+        public bool ValidateType(object value)
         {
-            if (valoare == null)
+            if (value == null)
                 return false;
 
-            return Tip switch
+            return Type switch
             {
-                TipDat.Int => valoare is int,
-                TipDat.Double => valoare is double || valoare is int, // Int poate fi promovat la double
-                TipDat.String => valoare is string,
+                DataType.Int => value is int,
+                DataType.Double => value is double || value is int, // Int can be promoted to double
+                DataType.String => value is string,
                 _ => false
             };
         }
 
         /// <summary>
-        /// Obține valoarea variabilei cu cast la tipul specificat.
+        /// Gets the variable value cast to the specified type.
         /// </summary>
-        /// <typeparam name="T">Tipul dorit</typeparam>
-        /// <returns>Valoarea castată</returns>
+        /// <typeparam name="T">The desired type</typeparam>
+        /// <returns>The cast value</returns>
         /// <exception cref="InvalidOperationException">
-        /// Dacă variabila nu este inițializată
+        /// If the variable is not initialized
         /// </exception>
         /// <exception cref="InvalidCastException">
-        /// Dacă valoarea nu poate fi castată la tipul dorit
+        /// If the value cannot be cast to the desired type
         /// </exception>
-        public T ObtineValoare<T>()
+        public T GetValue<T>()
         {
-            if (!EsteInitializata)
+            if (!IsInitialized)
             {
                 throw new InvalidOperationException(
-                    $"Variabila '{Nume}' nu a fost inițializată");
+                    $"Variable '{Name}' was not initialized");
             }
 
-            if (Valoare is T valoareCastata)
-                return valoareCastata;
+            if (Value is T castValue)
+                return castValue;
 
             throw new InvalidCastException(
-                $"Valoarea variabilei '{Nume}' nu poate fi castată la {typeof(T).Name}");
+                $"Variable '{Name}' value cannot be cast to {typeof(T).Name}");
         }
 
         /// <summary>
-        /// Resetează variabila la starea neinițializată.
+        /// Resets the variable to uninitialized state.
         /// </summary>
-        public void Reseteaza()
+        public void Reset()
         {
-            Valoare = null;
-            EsteInitializata = false;
+            Value = null;
+            IsInitialized = false;
         }
 
         /// <summary>
-        /// Returnează reprezentare text pentru debugging.
+        /// Returns text representation for debugging.
         /// </summary>
         public override string ToString()
         {
-            string stare = EsteInitializata ? $" = {FormatareValoare()}" : " (neinițializată)";
-            return $"{Tip} {Nume}{stare}";
+            string state = IsInitialized ? $" = {FormatValue()}" : " (uninitialized)";
+            return $"{Type} {Name}{state}";
         }
 
         /// <summary>
-        /// Formatare valoare pentru afișare.
+        /// Format value for display.
         /// </summary>
-        private string FormatareValoare()
+        private string FormatValue()
         {
-            if (Valoare == null)
+            if (Value == null)
                 return "null";
 
-            if (Valoare is string str)
+            if (Value is string str)
                 return $"\"{str}\"";
 
-            return Valoare.ToString();
+            return Value.ToString();
         }
 
         /// <summary>
-        /// Compară două variabile pentru egalitate (bazat pe nume).
+        /// Compares two variables for equality (based on name).
         /// </summary>
         public override bool Equals(object obj)
         {
-            if (obj is Variabila alta)
+            if (obj is Variable other)
             {
-                return Nume == alta.Nume;
+                return Name == other.Name;
             }
             return false;
         }
 
         /// <summary>
-        /// Returnează hash code bazat pe nume.
+        /// Returns hash code based on name.
         /// </summary>
         public override int GetHashCode()
         {
-            return Nume.GetHashCode();
+            return Name.GetHashCode();
         }
 
         #endregion

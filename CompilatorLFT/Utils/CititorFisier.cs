@@ -4,80 +4,80 @@ using System.IO;
 namespace CompilatorLFT.Utils
 {
     /// <summary>
-    /// Utilitar pentru citirea fisierelor sursa.
+    /// Utility for reading source files.
     /// </summary>
-    public static class CititorFisier
+    public static class FileReader
     {
         /// <summary>
-        /// Citeste continutul unui fisier text.
+        /// Reads the content of a text file.
         /// </summary>
-        /// <param name="caleFisier">Calea catre fisier</param>
-        /// <returns>Continutul fisierului sau null daca eroare</returns>
-        public static string CitesteFisier(string caleFisier)
+        /// <param name="filePath">Path to the file</param>
+        /// <returns>File content or null if error</returns>
+        public static string ReadFile(string filePath)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(caleFisier))
+                if (string.IsNullOrWhiteSpace(filePath))
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Eroare: Calea fisierului nu poate fi goala!");
+                    Console.WriteLine("Error: File path cannot be empty!");
                     Console.ResetColor();
                     return null;
                 }
 
-                if (!File.Exists(caleFisier))
+                if (!File.Exists(filePath))
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Eroare: Fisierul '{caleFisier}' nu exista!");
+                    Console.WriteLine($"Error: File '{filePath}' does not exist!");
                     Console.ResetColor();
                     return null;
                 }
 
-                return File.ReadAllText(caleFisier);
+                return File.ReadAllText(filePath);
             }
             catch (IOException ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Eroare la citirea fisierului: {ex.Message}");
+                Console.WriteLine($"Error reading file: {ex.Message}");
                 Console.ResetColor();
                 return null;
             }
             catch (UnauthorizedAccessException ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Eroare: Nu aveti permisiuni pentru fisier: {ex.Message}");
+                Console.WriteLine($"Error: You do not have permission for file: {ex.Message}");
                 Console.ResetColor();
                 return null;
             }
         }
 
         /// <summary>
-        /// Verifica daca un fisier exista.
+        /// Checks if a file exists.
         /// </summary>
-        /// <param name="caleFisier">Calea catre fisier</param>
-        /// <returns>True daca fisierul exista</returns>
-        public static bool ExistaFisier(string caleFisier)
+        /// <param name="filePath">Path to the file</param>
+        /// <returns>True if file exists</returns>
+        public static bool FileExists(string filePath)
         {
-            return !string.IsNullOrWhiteSpace(caleFisier) && File.Exists(caleFisier);
+            return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
         }
 
         /// <summary>
-        /// Afiseaza continutul fisierului cu numere de linii.
+        /// Displays file content with line numbers.
         /// </summary>
-        /// <param name="continut">Continutul de afisat</param>
-        public static void AfiseazaCuNumereLinii(string continut)
+        /// <param name="content">Content to display</param>
+        public static void DisplayWithLineNumbers(string content)
         {
-            if (string.IsNullOrEmpty(continut))
+            if (string.IsNullOrEmpty(content))
                 return;
 
-            var linii = continut.Split('\n');
+            var lines = content.Split('\n');
 
-            for (int i = 0; i < linii.Length; i++)
+            for (int i = 0; i < lines.Length; i++)
             {
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.Write($"{i + 1,3} | ");
                 Console.ResetColor();
-                Console.WriteLine(linii[i].TrimEnd('\r'));
+                Console.WriteLine(lines[i].TrimEnd('\r'));
             }
         }
     }

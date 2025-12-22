@@ -1,609 +1,609 @@
 using System;
 using System.Collections.Generic;
 using CompilatorLFT.Models;
-using CompilatorLFT.Models.Expresii;
-using CompilatorLFT.Models.Instructiuni;
+using CompilatorLFT.Models.Expressions;
+using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
 
 namespace CompilatorLFT.Core
 {
     /// <summary>
-    /// Analizator sintactic (parser) recursive descent.
+    /// Recursive descent syntax analyzer (parser).
     /// </summary>
     /// <remarks>
-    /// Referinta: Dragon Book, Cap. 4 - Syntax Analysis
-    /// Implementeaza gramatica:
-    /// Program := Instructiune*
-    /// Instructiune := Declaratie | Atribuire | For | While | If | Bloc | ExpresieStandalone
-    /// Expresie := ExpresieRelationala
-    /// ExpresieRelationala := Termen (OpRelational Termen)*
-    /// Termen := Factor (('+' | '-') Factor)*
-    /// Factor := Primar (('*' | '/') Primar)*
-    /// Primar := '-' Primar | '(' Expresie ')' | Literal | Identificator
+    /// Reference: Dragon Book, Ch. 4 - Syntax Analysis
+    /// Implements grammar:
+    /// Program := Statement*
+    /// Statement := Declaration | Assignment | For | While | If | Block | ExpressionStandalone
+    /// Expression := RelationalExpression
+    /// RelationalExpression := Term (RelOp Term)*
+    /// Term := Factor (('+' | '-') Factor)*
+    /// Factor := Primary (('*' | '/') Primary)*
+    /// Primary := '-' Primary | '(' Expression ')' | Literal | Identifier
     /// </remarks>
     public class Parser
     {
-        #region Campuri private
+        #region Private Fields
 
-        private readonly AtomLexical[] _tokeni;
+        private readonly Token[] _tokens;
         private int _index;
-        private readonly List<EroareCompilare> _erori;
-        private readonly TabelSimboluri _tabelSimboluri;
+        private readonly List<CompilationError> _errors;
+        private readonly SymbolTable _symbolTable;
 
         #endregion
 
-        #region Proprietati
+        #region Properties
 
-        /// <summary>Tokenul curent.</summary>
-        private AtomLexical AtomCurent => _index < _tokeni.Length ?
-            _tokeni[_index] : _tokeni[^1];
+        /// <summary>Current token.</summary>
+        private Token CurrentToken => _index < _tokens.Length ?
+            _tokens[_index] : _tokens[^1];
 
-        /// <summary>Lista de erori de parsare.</summary>
-        public IReadOnlyList<EroareCompilare> Erori => _erori;
+        /// <summary>List of parsing errors.</summary>
+        public IReadOnlyList<CompilationError> Errors => _errors;
 
-        /// <summary>Tabelul de simboluri populat.</summary>
-        public TabelSimboluri TabelSimboluri => _tabelSimboluri;
+        /// <summary>Populated symbol table.</summary>
+        public SymbolTable SymbolTable => _symbolTable;
 
         #endregion
 
         #region Constructor
 
         /// <summary>
-        /// Initializeaza parser-ul cu textul sursa.
+        /// Initializes the parser with source text.
         /// </summary>
-        /// <param name="text">Textul sursa de parsat</param>
+        /// <param name="text">Source text to parse</param>
         public Parser(string text)
         {
             var lexer = new Lexer(text);
-            var tokeni = lexer.Tokenizeaza();
+            var tokens = lexer.Tokenize();
 
-            _tokeni = tokeni.ToArray();
+            _tokens = tokens.ToArray();
             _index = 0;
-            _erori = new List<EroareCompilare>();
-            _tabelSimboluri = new TabelSimboluri();
+            _errors = new List<CompilationError>();
+            _symbolTable = new SymbolTable();
 
-            // Adauga erorile lexicale
-            _erori.AddRange(lexer.Erori);
+            // Add lexical errors
+            _errors.AddRange(lexer.Errors);
         }
 
         #endregion
 
-        #region Metode helper
+        #region Helper Methods
 
         /// <summary>
-        /// Consuma tokenul curent si avanseaza.
+        /// Consumes the current token and advances.
         /// </summary>
-        private AtomLexical ConsumaAtom()
+        private Token ConsumeToken()
         {
-            var atom = AtomCurent;
+            var token = CurrentToken;
             _index++;
-            return atom;
+            return token;
         }
 
         /// <summary>
-        /// Verifica tipul curent si consuma daca se potriveste.
+        /// Checks the current type and consumes if it matches.
         /// </summary>
-        private AtomLexical VerificaTip(TipAtomLexical tipAsteptat)
+        private Token ExpectType(TokenType expectedType)
         {
-            if (AtomCurent.Tip == tipAsteptat)
+            if (CurrentToken.Type == expectedType)
             {
-                return ConsumaAtom();
+                return ConsumeToken();
             }
 
-            _erori.Add(EroareCompilare.Sintactica(
-                AtomCurent.Linie, AtomCurent.Coloana,
-                $"se astepta '{tipAsteptat}' dar s-a gasit '{AtomCurent.Tip}'"));
+            _errors.Add(CompilationError.Syntactic(
+                CurrentToken.Line, CurrentToken.Column,
+                $"expected '{expectedType}' but found '{CurrentToken.Type}'"));
 
-            return new AtomLexical(
-                TipAtomLexical.Invalid, "", null,
-                AtomCurent.Linie, AtomCurent.Coloana, 0);
+            return new Token(
+                TokenType.Invalid, "", null,
+                CurrentToken.Line, CurrentToken.Column, 0);
         }
 
         /// <summary>
-        /// Verifica daca atomul curent este de unul din tipurile date.
+        /// Checks if the current token is one of the given types.
         /// </summary>
-        private bool PrivesteSiUrmator(params TipAtomLexical[] tipuri)
+        private bool Peek(params TokenType[] types)
         {
-            foreach (var tip in tipuri)
+            foreach (var type in types)
             {
-                if (AtomCurent.Tip == tip)
+                if (CurrentToken.Type == type)
                     return true;
             }
             return false;
         }
 
         /// <summary>
-        /// Recupereaza dupa o eroare - avanseaza pana la un punct sigur.
+        /// Recovers after an error - advances to a safe point.
         /// </summary>
-        private void RecupereazaDupaEroare()
+        private void RecoverFromError()
         {
-            while (!PrivesteSiUrmator(
-                TipAtomLexical.PunctVirgula,
-                TipAtomLexical.AcoladaInchisa,
-                TipAtomLexical.Terminator))
+            while (!Peek(
+                TokenType.Semicolon,
+                TokenType.CloseBrace,
+                TokenType.EndOfFile))
             {
-                ConsumaAtom();
+                ConsumeToken();
             }
 
-            if (AtomCurent.Tip == TipAtomLexical.PunctVirgula)
+            if (CurrentToken.Type == TokenType.Semicolon)
             {
-                ConsumaAtom();
+                ConsumeToken();
             }
         }
 
         #endregion
 
-        #region Parsing Program
+        #region Program Parsing
 
         /// <summary>
-        /// Parseaza intregul program.
+        /// Parses the entire program.
         /// </summary>
-        /// <returns>Arborele sintactic al programului</returns>
-        public ProgramComplet ParseazaProgram()
+        /// <returns>The syntax tree of the program</returns>
+        public Program ParseProgram()
         {
-            var instructiuni = new List<Instructiune>();
+            var statements = new List<Statement>();
 
-            while (AtomCurent.Tip != TipAtomLexical.Terminator)
+            while (CurrentToken.Type != TokenType.EndOfFile)
             {
                 try
                 {
-                    var instr = ParseazaInstructiune();
-                    if (instr != null)
+                    var stmt = ParseStatement();
+                    if (stmt != null)
                     {
-                        instructiuni.Add(instr);
+                        statements.Add(stmt);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _erori.Add(EroareCompilare.Sintactica(
-                        AtomCurent.Linie, AtomCurent.Coloana,
+                    _errors.Add(CompilationError.Syntactic(
+                        CurrentToken.Line, CurrentToken.Column,
                         ex.Message));
-                    RecupereazaDupaEroare();
+                    RecoverFromError();
                 }
             }
 
-            return new ProgramComplet(instructiuni);
+            return new Program(statements);
         }
 
         #endregion
 
-        #region Parsing Instructiuni
+        #region Statement Parsing
 
         /// <summary>
-        /// Parseaza o instructiune.
+        /// Parses a statement.
         /// </summary>
-        private Instructiune ParseazaInstructiune()
+        private Statement ParseStatement()
         {
-            // Declaratie (int/double/string ...)
-            if (PrivesteSiUrmator(
-                TipAtomLexical.CuvantCheieInt,
-                TipAtomLexical.CuvantCheieDouble,
-                TipAtomLexical.CuvantCheieString))
+            // Declaration (int/double/string ...)
+            if (Peek(
+                TokenType.KeywordInt,
+                TokenType.KeywordDouble,
+                TokenType.KeywordString))
             {
-                return ParseazaDeclaratie();
+                return ParseDeclaration();
             }
 
             // For
-            if (PrivesteSiUrmator(TipAtomLexical.CuvantCheieFor))
+            if (Peek(TokenType.KeywordFor))
             {
-                return ParseazaFor();
+                return ParseFor();
             }
 
             // While
-            if (PrivesteSiUrmator(TipAtomLexical.CuvantCheieWhile))
+            if (Peek(TokenType.KeywordWhile))
             {
-                return ParseazaWhile();
+                return ParseWhile();
             }
 
             // If
-            if (PrivesteSiUrmator(TipAtomLexical.CuvantCheieIf))
+            if (Peek(TokenType.KeywordIf))
             {
-                return ParseazaIf();
+                return ParseIf();
             }
 
-            // Bloc
-            if (PrivesteSiUrmator(TipAtomLexical.AcoladaDeschisa))
+            // Block
+            if (Peek(TokenType.OpenBrace))
             {
-                return ParseazaBloc();
+                return ParseBlock();
             }
 
-            // Atribuire sau Expresie standalone
-            if (PrivesteSiUrmator(TipAtomLexical.Identificator))
+            // Assignment or standalone expression
+            if (Peek(TokenType.Identifier))
             {
-                // Salvam pozitia pentru backtracking
-                int pozitieInceput = _index;
-                var id = ConsumaAtom();
+                // Save position for backtracking
+                int startPosition = _index;
+                var id = ConsumeToken();
 
-                if (AtomCurent.Tip == TipAtomLexical.Egal)
+                if (CurrentToken.Type == TokenType.Equal)
                 {
-                    // E atribuire
-                    var egal = ConsumaAtom();
-                    var expr = ParseazaExpresie();
-                    var punctVirgula = VerificaTip(TipAtomLexical.PunctVirgula);
+                    // It's an assignment
+                    var equal = ConsumeToken();
+                    var expr = ParseExpression();
+                    var semicolon = ExpectType(TokenType.Semicolon);
 
-                    // Verificare semantica
-                    if (!_tabelSimboluri.Exista(id.Text))
+                    // Semantic check
+                    if (!_symbolTable.Exists(id.Text))
                     {
-                        _erori.Add(EroareCompilare.Semantica(
-                            id.Linie, id.Coloana,
-                            $"variabila '{id.Text}' nu a fost declarata"));
+                        _errors.Add(CompilationError.Semantic(
+                            id.Line, id.Column,
+                            $"variable '{id.Text}' was not declared"));
                     }
 
-                    return new InstructiuneAtribuire(id, egal, expr, punctVirgula);
+                    return new AssignmentStatement(id, equal, expr, semicolon);
                 }
                 else
                 {
-                    // E expresie standalone - backtrack
-                    _index = pozitieInceput;
-                    var expr = ParseazaExpresie();
-                    var punctVirgula = VerificaTip(TipAtomLexical.PunctVirgula);
-                    return new InstructiuneExpresie(expr, punctVirgula);
+                    // It's a standalone expression - backtrack
+                    _index = startPosition;
+                    var expr = ParseExpression();
+                    var semicolon = ExpectType(TokenType.Semicolon);
+                    return new ExpressionStatement(expr, semicolon);
                 }
             }
 
-            // Expresie standalone
-            var expresie = ParseazaExpresie();
-            var pv = VerificaTip(TipAtomLexical.PunctVirgula);
-            return new InstructiuneExpresie(expresie, pv);
+            // Standalone expression
+            var expression = ParseExpression();
+            var pv = ExpectType(TokenType.Semicolon);
+            return new ExpressionStatement(expression, pv);
         }
 
         /// <summary>
-        /// Parseaza o declaratie de variabile.
+        /// Parses a variable declaration.
         /// </summary>
-        private InstructiuneDeclaratie ParseazaDeclaratie()
+        private DeclarationStatement ParseDeclaration()
         {
-            var tipCuvant = ConsumaAtom();
-            var tipDat = TabelSimboluri.ConvertesteLaTipDat(tipCuvant.Tip);
+            var typeKeyword = ConsumeToken();
+            var dataType = SymbolTable.ConvertToDataType(typeKeyword.Type);
 
-            var declaratii = new List<(AtomLexical, Expresie)>();
+            var declarations = new List<(Token, Expression)>();
 
             do
             {
-                var id = VerificaTip(TipAtomLexical.Identificator);
+                var id = ExpectType(TokenType.Identifier);
 
-                // Adauga in tabel simboluri
-                _tabelSimboluri.Adauga(id.Text, tipDat, id.Linie, id.Coloana, _erori);
+                // Add to symbol table
+                _symbolTable.Add(id.Text, dataType, id.Line, id.Column, _errors);
 
-                Expresie expr = null;
+                Expression expr = null;
 
-                // Initializare?
-                if (AtomCurent.Tip == TipAtomLexical.Egal)
+                // Initialization?
+                if (CurrentToken.Type == TokenType.Equal)
                 {
-                    ConsumaAtom(); // Skip '='
-                    expr = ParseazaExpresie();
+                    ConsumeToken(); // Skip '='
+                    expr = ParseExpression();
                 }
 
-                declaratii.Add((id, expr));
+                declarations.Add((id, expr));
 
-            } while (AtomCurent.Tip == TipAtomLexical.Virgula && ConsumaAtom() != null);
+            } while (CurrentToken.Type == TokenType.Comma && ConsumeToken() != null);
 
-            var punctVirgula = VerificaTip(TipAtomLexical.PunctVirgula);
+            var semicolon = ExpectType(TokenType.Semicolon);
 
-            return new InstructiuneDeclaratie(tipCuvant, declaratii, punctVirgula);
+            return new DeclarationStatement(typeKeyword, declarations, semicolon);
         }
 
         /// <summary>
-        /// Parseaza o instructiune FOR.
+        /// Parses a FOR statement.
         /// </summary>
-        private InstructiuneFor ParseazaFor()
+        private ForStatement ParseFor()
         {
-            var cuvantFor = ConsumaAtom();
-            var parantezaDeschisa = VerificaTip(TipAtomLexical.ParantezaDeschisa);
+            var forKeyword = ConsumeToken();
+            var openParen = ExpectType(TokenType.OpenParen);
 
-            // Initializare
-            Instructiune init = null;
-            if (!PrivesteSiUrmator(TipAtomLexical.PunctVirgula))
+            // Initialization
+            Statement init = null;
+            if (!Peek(TokenType.Semicolon))
             {
-                init = ParseazaInstructiuneForInit();
+                init = ParseForInit();
             }
             else
             {
-                ConsumaAtom(); // Skip ;
+                ConsumeToken(); // Skip ;
             }
 
-            // Conditie
-            Expresie conditie = null;
-            if (!PrivesteSiUrmator(TipAtomLexical.PunctVirgula))
+            // Condition
+            Expression condition = null;
+            if (!Peek(TokenType.Semicolon))
             {
-                conditie = ParseazaExpresie();
+                condition = ParseExpression();
             }
 
-            var punctVirgula = VerificaTip(TipAtomLexical.PunctVirgula);
+            var semicolon = ExpectType(TokenType.Semicolon);
 
             // Increment
-            Instructiune increment = null;
-            if (!PrivesteSiUrmator(TipAtomLexical.ParantezaInchisa))
+            Statement increment = null;
+            if (!Peek(TokenType.CloseParen))
             {
-                increment = ParseazaInstructiuneForIncrement();
+                increment = ParseForIncrement();
             }
 
-            var parantezaInchisa = VerificaTip(TipAtomLexical.ParantezaInchisa);
+            var closeParen = ExpectType(TokenType.CloseParen);
 
-            // Corp
-            var corp = ParseazaInstructiune();
+            // Body
+            var body = ParseStatement();
 
-            return new InstructiuneFor(
-                cuvantFor, parantezaDeschisa,
-                init, conditie, punctVirgula, increment,
-                parantezaInchisa, corp);
+            return new ForStatement(
+                forKeyword, openParen,
+                init, condition, semicolon, increment,
+                closeParen, body);
         }
 
         /// <summary>
-        /// Parseaza initializarea din FOR.
+        /// Parses the initialization part of FOR.
         /// </summary>
-        private Instructiune ParseazaInstructiuneForInit()
+        private Statement ParseForInit()
         {
-            if (PrivesteSiUrmator(
-                TipAtomLexical.CuvantCheieInt,
-                TipAtomLexical.CuvantCheieDouble,
-                TipAtomLexical.CuvantCheieString))
+            if (Peek(
+                TokenType.KeywordInt,
+                TokenType.KeywordDouble,
+                TokenType.KeywordString))
             {
-                return ParseazaDeclaratie();
+                return ParseDeclaration();
             }
 
-            // Atribuire
-            var id = VerificaTip(TipAtomLexical.Identificator);
+            // Assignment
+            var id = ExpectType(TokenType.Identifier);
 
-            if (!_tabelSimboluri.Exista(id.Text))
+            if (!_symbolTable.Exists(id.Text))
             {
-                _erori.Add(EroareCompilare.Semantica(
-                    id.Linie, id.Coloana,
-                    $"variabila '{id.Text}' nu a fost declarata"));
+                _errors.Add(CompilationError.Semantic(
+                    id.Line, id.Column,
+                    $"variable '{id.Text}' was not declared"));
             }
 
-            var egal = VerificaTip(TipAtomLexical.Egal);
-            var expr = ParseazaExpresie();
-            var punctVirgula = VerificaTip(TipAtomLexical.PunctVirgula);
+            var equal = ExpectType(TokenType.Equal);
+            var expr = ParseExpression();
+            var semicolon = ExpectType(TokenType.Semicolon);
 
-            return new InstructiuneAtribuire(id, egal, expr, punctVirgula);
+            return new AssignmentStatement(id, equal, expr, semicolon);
         }
 
         /// <summary>
-        /// Parseaza incrementul din FOR (fara ;).
+        /// Parses the increment part of FOR (without ;).
         /// </summary>
-        private Instructiune ParseazaInstructiuneForIncrement()
+        private Statement ParseForIncrement()
         {
-            var id = VerificaTip(TipAtomLexical.Identificator);
+            var id = ExpectType(TokenType.Identifier);
 
-            if (!_tabelSimboluri.Exista(id.Text))
+            if (!_symbolTable.Exists(id.Text))
             {
-                _erori.Add(EroareCompilare.Semantica(
-                    id.Linie, id.Coloana,
-                    $"variabila '{id.Text}' nu a fost declarata"));
+                _errors.Add(CompilationError.Semantic(
+                    id.Line, id.Column,
+                    $"variable '{id.Text}' was not declared"));
             }
 
-            var egal = VerificaTip(TipAtomLexical.Egal);
-            var expr = ParseazaExpresie();
+            var equal = ExpectType(TokenType.Equal);
+            var expr = ParseExpression();
 
-            // Fara punct si virgula aici!
-            return new InstructiuneAtribuire(id, egal, expr, null);
+            // No semicolon here!
+            return new AssignmentStatement(id, equal, expr, null);
         }
 
         /// <summary>
-        /// Parseaza o instructiune WHILE.
+        /// Parses a WHILE statement.
         /// </summary>
-        private InstructiuneWhile ParseazaWhile()
+        private WhileStatement ParseWhile()
         {
-            var cuvantWhile = ConsumaAtom();
-            var parantezaDeschisa = VerificaTip(TipAtomLexical.ParantezaDeschisa);
-            var conditie = ParseazaExpresie();
-            var parantezaInchisa = VerificaTip(TipAtomLexical.ParantezaInchisa);
-            var corp = ParseazaInstructiune();
+            var whileKeyword = ConsumeToken();
+            var openParen = ExpectType(TokenType.OpenParen);
+            var condition = ParseExpression();
+            var closeParen = ExpectType(TokenType.CloseParen);
+            var body = ParseStatement();
 
-            return new InstructiuneWhile(
-                cuvantWhile, parantezaDeschisa,
-                conditie, parantezaInchisa, corp);
+            return new WhileStatement(
+                whileKeyword, openParen,
+                condition, closeParen, body);
         }
 
         /// <summary>
-        /// Parseaza o instructiune IF.
+        /// Parses an IF statement.
         /// </summary>
-        private InstructiuneIf ParseazaIf()
+        private IfStatement ParseIf()
         {
-            var cuvantIf = ConsumaAtom();
-            var parantezaDeschisa = VerificaTip(TipAtomLexical.ParantezaDeschisa);
-            var conditie = ParseazaExpresie();
-            var parantezaInchisa = VerificaTip(TipAtomLexical.ParantezaInchisa);
-            var corpAdevarat = ParseazaInstructiune();
+            var ifKeyword = ConsumeToken();
+            var openParen = ExpectType(TokenType.OpenParen);
+            var condition = ParseExpression();
+            var closeParen = ExpectType(TokenType.CloseParen);
+            var thenBody = ParseStatement();
 
-            AtomLexical cuvantElse = null;
-            Instructiune corpFals = null;
+            Token elseKeyword = null;
+            Statement elseBody = null;
 
-            if (AtomCurent.Tip == TipAtomLexical.CuvantCheieElse)
+            if (CurrentToken.Type == TokenType.KeywordElse)
             {
-                cuvantElse = ConsumaAtom();
-                corpFals = ParseazaInstructiune();
+                elseKeyword = ConsumeToken();
+                elseBody = ParseStatement();
             }
 
-            return new InstructiuneIf(
-                cuvantIf, parantezaDeschisa,
-                conditie, parantezaInchisa, corpAdevarat,
-                cuvantElse, corpFals);
+            return new IfStatement(
+                ifKeyword, openParen,
+                condition, closeParen, thenBody,
+                elseKeyword, elseBody);
         }
 
         /// <summary>
-        /// Parseaza un bloc de instructiuni.
+        /// Parses a block of statements.
         /// </summary>
-        private Bloc ParseazaBloc()
+        private BlockStatement ParseBlock()
         {
-            var acoladaDeschisa = ConsumaAtom();
-            var instructiuni = new List<Instructiune>();
+            var openBrace = ConsumeToken();
+            var statements = new List<Statement>();
 
-            while (!PrivesteSiUrmator(
-                TipAtomLexical.AcoladaInchisa,
-                TipAtomLexical.Terminator))
+            while (!Peek(
+                TokenType.CloseBrace,
+                TokenType.EndOfFile))
             {
-                var instr = ParseazaInstructiune();
-                if (instr != null)
+                var stmt = ParseStatement();
+                if (stmt != null)
                 {
-                    instructiuni.Add(instr);
+                    statements.Add(stmt);
                 }
             }
 
-            var acoladaInchisa = VerificaTip(TipAtomLexical.AcoladaInchisa);
+            var closeBrace = ExpectType(TokenType.CloseBrace);
 
-            return new Bloc(acoladaDeschisa, instructiuni, acoladaInchisa);
+            return new BlockStatement(openBrace, statements, closeBrace);
         }
 
         #endregion
 
-        #region Parsing Expresii
+        #region Expression Parsing
 
         /// <summary>
-        /// Parseaza o expresie.
+        /// Parses an expression.
         /// </summary>
-        private Expresie ParseazaExpresie()
+        private Expression ParseExpression()
         {
-            return ParseazaExpresieRelationala();
+            return ParseRelationalExpression();
         }
 
         /// <summary>
-        /// Parseaza o expresie relationala.
-        /// Precedenta: &lt;, &gt;, &lt;=, &gt;=, ==, !=
+        /// Parses a relational expression.
+        /// Precedence: &lt;, &gt;, &lt;=, &gt;=, ==, !=
         /// </summary>
-        private Expresie ParseazaExpresieRelationala()
+        private Expression ParseRelationalExpression()
         {
-            var stanga = ParseazaTermen();
+            var left = ParseTerm();
 
-            while (PrivesteSiUrmator(
-                TipAtomLexical.MaiMic,
-                TipAtomLexical.MaiMare,
-                TipAtomLexical.MaiMicEgal,
-                TipAtomLexical.MaiMareEgal,
-                TipAtomLexical.EgalEgal,
-                TipAtomLexical.Diferit))
+            while (Peek(
+                TokenType.LessThan,
+                TokenType.GreaterThan,
+                TokenType.LessThanOrEqual,
+                TokenType.GreaterThanOrEqual,
+                TokenType.EqualEqual,
+                TokenType.NotEqual))
             {
-                var op = ConsumaAtom();
-                var dreapta = ParseazaTermen();
-                stanga = new ExpresieBinara(stanga, op, dreapta);
+                var op = ConsumeToken();
+                var right = ParseTerm();
+                left = new BinaryExpression(left, op, right);
             }
 
-            return stanga;
+            return left;
         }
 
         /// <summary>
-        /// Parseaza un termen (adunare/scadere).
+        /// Parses a term (addition/subtraction).
         /// </summary>
-        private Expresie ParseazaTermen()
+        private Expression ParseTerm()
         {
-            var stanga = ParseazaFactor();
+            var left = ParseFactor();
 
-            while (PrivesteSiUrmator(
-                TipAtomLexical.Plus,
-                TipAtomLexical.Minus))
+            while (Peek(
+                TokenType.Plus,
+                TokenType.Minus))
             {
-                var op = ConsumaAtom();
-                var dreapta = ParseazaFactor();
-                stanga = new ExpresieBinara(stanga, op, dreapta);
+                var op = ConsumeToken();
+                var right = ParseFactor();
+                left = new BinaryExpression(left, op, right);
             }
 
-            return stanga;
+            return left;
         }
 
         /// <summary>
-        /// Parseaza un factor (inmultire/impartire).
+        /// Parses a factor (multiplication/division).
         /// </summary>
-        private Expresie ParseazaFactor()
+        private Expression ParseFactor()
         {
-            var stanga = ParseazaPrimar();
+            var left = ParsePrimary();
 
-            while (PrivesteSiUrmator(
-                TipAtomLexical.Star,
-                TipAtomLexical.Slash))
+            while (Peek(
+                TokenType.Star,
+                TokenType.Slash))
             {
-                var op = ConsumaAtom();
-                var dreapta = ParseazaPrimar();
-                stanga = new ExpresieBinara(stanga, op, dreapta);
+                var op = ConsumeToken();
+                var right = ParsePrimary();
+                left = new BinaryExpression(left, op, right);
             }
 
-            return stanga;
+            return left;
         }
 
         /// <summary>
-        /// Parseaza o expresie primara.
+        /// Parses a primary expression.
         /// </summary>
-        private Expresie ParseazaPrimar()
+        private Expression ParsePrimary()
         {
-            // Minus unar
-            if (AtomCurent.Tip == TipAtomLexical.Minus)
+            // Unary minus
+            if (CurrentToken.Type == TokenType.Minus)
             {
-                var op = ConsumaAtom();
-                var operand = ParseazaPrimar();
-                return new ExpresieUnara(op, operand);
+                var op = ConsumeToken();
+                var operand = ParsePrimary();
+                return new UnaryExpression(op, operand);
             }
 
-            // Plus unar - EROARE conform cerintelor!
-            if (AtomCurent.Tip == TipAtomLexical.Plus)
+            // Unary plus - ERROR according to requirements!
+            if (CurrentToken.Type == TokenType.Plus)
             {
-                _erori.Add(EroareCompilare.Lexicala(
-                    AtomCurent.Linie, AtomCurent.Coloana,
-                    "plus unar nu este permis"));
-                ConsumaAtom();
-                return ParseazaPrimar();
+                _errors.Add(CompilationError.Lexical(
+                    CurrentToken.Line, CurrentToken.Column,
+                    "unary plus is not allowed"));
+                ConsumeToken();
+                return ParsePrimary();
             }
 
-            // Paranteze
-            if (AtomCurent.Tip == TipAtomLexical.ParantezaDeschisa)
+            // Parentheses
+            if (CurrentToken.Type == TokenType.OpenParen)
             {
-                var parantezaDeschisa = ConsumaAtom();
-                var expr = ParseazaExpresie();
-                var parantezaInchisa = VerificaTip(TipAtomLexical.ParantezaInchisa);
-                return new ExpresieCuParanteze(parantezaDeschisa, expr, parantezaInchisa);
+                var openParen = ConsumeToken();
+                var expr = ParseExpression();
+                var closeParen = ExpectType(TokenType.CloseParen);
+                return new ParenthesizedExpression(openParen, expr, closeParen);
             }
 
-            // Numar intreg
-            if (AtomCurent.Tip == TipAtomLexical.NumarIntreg)
+            // Integer number
+            if (CurrentToken.Type == TokenType.IntegerNumber)
             {
-                var atom = ConsumaAtom();
-                return new ExpresieNumerica(atom);
+                var token = ConsumeToken();
+                return new NumericExpression(token);
             }
 
-            // Numar zecimal
-            if (AtomCurent.Tip == TipAtomLexical.NumarZecimal)
+            // Decimal number
+            if (CurrentToken.Type == TokenType.DecimalNumber)
             {
-                var atom = ConsumaAtom();
-                return new ExpresieNumerica(atom);
+                var token = ConsumeToken();
+                return new NumericExpression(token);
             }
 
             // String literal
-            if (AtomCurent.Tip == TipAtomLexical.StringLiteral)
+            if (CurrentToken.Type == TokenType.StringLiteral)
             {
-                var atom = ConsumaAtom();
-                return new ExpresieString(atom);
+                var token = ConsumeToken();
+                return new StringExpression(token);
             }
 
-            // Identificator (variabila)
-            if (AtomCurent.Tip == TipAtomLexical.Identificator)
+            // Identifier (variable)
+            if (CurrentToken.Type == TokenType.Identifier)
             {
-                var id = ConsumaAtom();
+                var id = ConsumeToken();
 
-                // Verificare semantica
-                if (!_tabelSimboluri.Exista(id.Text))
+                // Semantic check
+                if (!_symbolTable.Exists(id.Text))
                 {
-                    _erori.Add(EroareCompilare.Semantica(
-                        id.Linie, id.Coloana,
-                        $"variabila '{id.Text}' nu a fost declarata"));
+                    _errors.Add(CompilationError.Semantic(
+                        id.Line, id.Column,
+                        $"variable '{id.Text}' was not declared"));
                 }
 
-                return new ExpresieIdentificator(id);
+                return new IdentifierExpression(id);
             }
 
-            // Eroare
-            _erori.Add(EroareCompilare.Sintactica(
-                AtomCurent.Linie, AtomCurent.Coloana,
-                $"expresie invalida - token neasteptat '{AtomCurent.Tip}'"));
+            // Error
+            _errors.Add(CompilationError.Syntactic(
+                CurrentToken.Line, CurrentToken.Column,
+                $"invalid expression - unexpected token '{CurrentToken.Type}'"));
 
-            // Returneaza un placeholder pentru a continua parsarea
-            var placeholder = new AtomLexical(
-                TipAtomLexical.NumarIntreg, "0", 0,
-                AtomCurent.Linie, AtomCurent.Coloana, _index);
+            // Return a placeholder to continue parsing
+            var placeholder = new Token(
+                TokenType.IntegerNumber, "0", 0,
+                CurrentToken.Line, CurrentToken.Column, _index);
 
-            if (AtomCurent.Tip != TipAtomLexical.Terminator)
+            if (CurrentToken.Type != TokenType.EndOfFile)
             {
-                ConsumaAtom();
+                ConsumeToken();
             }
 
-            return new ExpresieNumerica(placeholder);
+            return new NumericExpression(placeholder);
         }
 
         #endregion
