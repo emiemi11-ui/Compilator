@@ -306,7 +306,7 @@ namespace CompilatorLFT.Core.VM
                     break;
 
                 case OpCode.TO_DOUBLE:
-                    ExecuteUnaryOp(ToDouble);
+                    ExecuteUnaryOp(v => (object)ToDouble(v));
                     break;
 
                 case OpCode.TO_STRING:
@@ -314,7 +314,7 @@ namespace CompilatorLFT.Core.VM
                     break;
 
                 case OpCode.TO_BOOL:
-                    ExecuteUnaryOp(ToBoolean);
+                    ExecuteUnaryOp(v => (object)ToBoolean(v));
                     break;
 
                 // Special
