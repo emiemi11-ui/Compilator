@@ -327,23 +327,236 @@ namespace CompilatorLFT.Models.Statements
     }
 
     /// <summary>
+    /// Print statement (from Grigoraș 6.5).
+    /// Syntax: print expression;
+    /// </summary>
+    public sealed class PrintStatement : Statement
+    {
+        public Token PrintKeyword { get; }
+        public Token OpenParen { get; }
+        public Expression Expression { get; }
+        public Token CloseParen { get; }
+        public Token Semicolon { get; }
+
+        public override TokenType Type => TokenType.PrintStatement;
+
+        public PrintStatement(
+            Token printKeyword,
+            Token openParen,
+            Expression expression,
+            Token closeParen,
+            Token semicolon)
+        {
+            PrintKeyword = printKeyword ?? throw new ArgumentNullException(nameof(printKeyword));
+            OpenParen = openParen; // Can be null for print expr; syntax
+            Expression = expression ?? throw new ArgumentNullException(nameof(expression));
+            CloseParen = closeParen; // Can be null for print expr; syntax
+            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return PrintKeyword;
+            if (OpenParen != null) yield return OpenParen;
+            yield return Expression;
+            if (CloseParen != null) yield return CloseParen;
+            yield return Semicolon;
+        }
+    }
+
+    /// <summary>
+    /// Break statement for exiting loops.
+    /// Syntax: break;
+    /// </summary>
+    public sealed class BreakStatement : Statement
+    {
+        public Token BreakKeyword { get; }
+        public Token Semicolon { get; }
+
+        public override TokenType Type => TokenType.BreakStatement;
+
+        public BreakStatement(Token breakKeyword, Token semicolon)
+        {
+            BreakKeyword = breakKeyword ?? throw new ArgumentNullException(nameof(breakKeyword));
+            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return BreakKeyword;
+            yield return Semicolon;
+        }
+    }
+
+    /// <summary>
+    /// Continue statement for skipping to next iteration.
+    /// Syntax: continue;
+    /// </summary>
+    public sealed class ContinueStatement : Statement
+    {
+        public Token ContinueKeyword { get; }
+        public Token Semicolon { get; }
+
+        public override TokenType Type => TokenType.ContinueStatement;
+
+        public ContinueStatement(Token continueKeyword, Token semicolon)
+        {
+            ContinueKeyword = continueKeyword ?? throw new ArgumentNullException(nameof(continueKeyword));
+            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return ContinueKeyword;
+            yield return Semicolon;
+        }
+    }
+
+    /// <summary>
+    /// Return statement for returning from functions.
+    /// Syntax: return expression; or return;
+    /// </summary>
+    public sealed class ReturnStatement : Statement
+    {
+        public Token ReturnKeyword { get; }
+        public Expression Expression { get; }  // Can be null for void return
+        public Token Semicolon { get; }
+
+        public override TokenType Type => TokenType.ReturnStatement;
+
+        public ReturnStatement(Token returnKeyword, Expression expression, Token semicolon)
+        {
+            ReturnKeyword = returnKeyword ?? throw new ArgumentNullException(nameof(returnKeyword));
+            Expression = expression;  // Can be null
+            Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return ReturnKeyword;
+            if (Expression != null) yield return Expression;
+            yield return Semicolon;
+        }
+    }
+
+    /// <summary>
+    /// Function parameter definition.
+    /// </summary>
+    public sealed class Parameter
+    {
+        public Token TypeKeyword { get; }
+        public Token Identifier { get; }
+
+        public Parameter(Token typeKeyword, Token identifier)
+        {
+            TypeKeyword = typeKeyword ?? throw new ArgumentNullException(nameof(typeKeyword));
+            Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+        }
+    }
+
+    /// <summary>
+    /// Function declaration statement (from Flex & Bison Ch. 3).
+    /// Syntax: function name(params) { body } or type name(params) { body }
+    /// </summary>
+    public sealed class FunctionDeclaration : Statement
+    {
+        public Token ReturnType { get; }  // Can be null if 'function' keyword is used
+        public Token FunctionKeyword { get; }  // Can be null if type is used
+        public Token Name { get; }
+        public Token OpenParen { get; }
+        public List<Parameter> Parameters { get; }
+        public Token CloseParen { get; }
+        public BlockStatement Body { get; }
+
+        public override TokenType Type => TokenType.FunctionDeclaration;
+
+        public FunctionDeclaration(
+            Token returnType,
+            Token functionKeyword,
+            Token name,
+            Token openParen,
+            List<Parameter> parameters,
+            Token closeParen,
+            BlockStatement body)
+        {
+            ReturnType = returnType;
+            FunctionKeyword = functionKeyword;
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            OpenParen = openParen ?? throw new ArgumentNullException(nameof(openParen));
+            Parameters = parameters ?? new List<Parameter>();
+            CloseParen = closeParen ?? throw new ArgumentNullException(nameof(closeParen));
+            Body = body ?? throw new ArgumentNullException(nameof(body));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            if (ReturnType != null) yield return ReturnType;
+            if (FunctionKeyword != null) yield return FunctionKeyword;
+            yield return Name;
+            yield return OpenParen;
+            // Parameters aren't SyntaxNodes, so we skip them
+            yield return CloseParen;
+            yield return Body;
+        }
+    }
+
+    /// <summary>
+    /// Compound assignment statement (+=, -=, *=, /=, %=).
+    /// Syntax: x += expr;
+    /// </summary>
+    public sealed class CompoundAssignmentStatement : Statement
+    {
+        public Token Identifier { get; }
+        public Token Operator { get; }
+        public Expression Expression { get; }
+        public Token Semicolon { get; }
+
+        public override TokenType Type => TokenType.AssignmentStatement;
+
+        public CompoundAssignmentStatement(
+            Token identifier,
+            Token operatorToken,
+            Expression expression,
+            Token semicolon)
+        {
+            Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+            Operator = operatorToken ?? throw new ArgumentNullException(nameof(operatorToken));
+            Expression = expression ?? throw new ArgumentNullException(nameof(expression));
+            Semicolon = semicolon;  // Can be null in for increment
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Identifier;
+            yield return Operator;
+            yield return Expression;
+            if (Semicolon != null) yield return Semicolon;
+        }
+    }
+
+    /// <summary>
     /// Root node - the complete program.
     /// Contains the list of all top-level statements.
     /// </summary>
     public sealed class Program : SyntaxNode
     {
         public List<Statement> Statements { get; }
+        public List<FunctionDeclaration> Functions { get; }
 
         public override TokenType Type => TokenType.Program;
 
-        public Program(List<Statement> statements)
+        public Program(List<Statement> statements, List<FunctionDeclaration> functions = null)
         {
             Statements = statements ?? new List<Statement>();
+            Functions = functions ?? new List<FunctionDeclaration>();
         }
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {
-            return Statements.Cast<SyntaxNode>();
+            foreach (var func in Functions)
+                yield return func;
+            foreach (var stmt in Statements)
+                yield return stmt;
         }
     }
 }

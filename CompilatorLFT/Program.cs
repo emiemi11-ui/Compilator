@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CompilatorLFT.Core;
+using CompilatorLFT.Models;
 using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
 
@@ -211,6 +212,7 @@ namespace CompilatorLFT
             var program = parser.ParseProgram();
 
             Console.WriteLine($"Parsed statements: {program.Statements.Count}");
+            Console.WriteLine($"Declared functions: {program.Functions.Count}");
             Console.WriteLine($"Declared variables: {parser.SymbolTable.VariableCount}");
 
             if (parser.Errors.Any())
@@ -233,6 +235,23 @@ namespace CompilatorLFT
 
             program.DisplayTree();
 
+            // PHASE 2.5: INTERMEDIATE CODE GENERATION (Grigoraș 6.4)
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("PHASE 2.5: INTERMEDIATE CODE GENERATION");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 50));
+
+            // Three-Address Code (Grigoraș 6.4.4)
+            var tacGenerator = new ThreeAddressCodeGenerator();
+            tacGenerator.Generate(program);
+            tacGenerator.DisplayTAC();
+
+            // Postfix Notation (Grigoraș 6.4.1)
+            var postfixGenerator = new PostfixGenerator();
+            postfixGenerator.Generate(program);
+            postfixGenerator.DisplayPostfix();
+
             // PHASE 3: EVALUATION AND EXECUTION
             Console.WriteLine("\n" + new string('=', 50));
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -240,7 +259,8 @@ namespace CompilatorLFT
             Console.ResetColor();
             Console.WriteLine(new string('=', 50));
 
-            var evaluator = new Evaluator(parser.SymbolTable);
+            var functions = new Dictionary<string, CompilatorLFT.Models.Statements.FunctionDeclaration>(parser.Functions);
+            var evaluator = new Evaluator(parser.SymbolTable, functions);
             evaluator.ExecuteProgram(program);
 
             if (evaluator.Errors.Any())
@@ -310,6 +330,49 @@ namespace CompilatorLFT
                 ("While", "int i = 0; int sum = 0; while (i < 5) { sum = sum + i; i = i + 1; }", true),
                 ("For", "int sum = 0; for (int i = 0; i < 5; i = i + 1) { sum = sum + i; }", true),
 
+                // NEW TESTS: Print statement (Grigoraș 6.5)
+                ("Print with parens", "print(5 + 3);", true),
+                ("Print without parens", "print 42;", true),
+                ("Print string", "print(\"Hello World\");", true),
+
+                // NEW TESTS: Logical operators
+                ("Logical AND", "int a = 5; bool b = (a > 3) && (a < 10);", true),
+                ("Logical OR", "int a = 5; bool b = (a > 10) || (a > 3);", true),
+                ("Logical NOT", "bool a = true; bool b = !a;", true),
+
+                // NEW TESTS: Boolean type
+                ("Boolean declaration", "bool a = true;", true),
+                ("Boolean expression", "bool a = 5 > 3;", true),
+
+                // NEW TESTS: Comments
+                ("Single-line comment", "int a = 5; // this is a comment\nint b = 3;", true),
+                ("Multi-line comment", "int a = 5; /* multi\nline\ncomment */ int b = 3;", true),
+
+                // NEW TESTS: Increment/decrement
+                ("Postfix increment", "int a = 5; a++;", true),
+                ("Prefix increment", "int a = 5; ++a;", true),
+                ("Postfix decrement", "int a = 5; a--;", true),
+                ("For with i++", "int sum = 0; for (int i = 0; i < 5; i++) { sum = sum + i; }", true),
+
+                // NEW TESTS: Compound assignment
+                ("Plus equals", "int a = 5; a += 3;", true),
+                ("Minus equals", "int a = 5; a -= 3;", true),
+                ("Times equals", "int a = 5; a *= 3;", true),
+                ("Divide equals", "int a = 10; a /= 2;", true),
+                ("Modulo equals", "int a = 10; a %= 3;", true),
+
+                // NEW TESTS: Functions
+                ("Function declaration and call", "function add(int a, int b) { return a + b; } int result = add(5, 3);", true),
+                ("Function with return type", "int add(int a, int b) { return a + b; } int result = add(5, 3);", true),
+
+                // NEW TESTS: Built-in functions
+                ("sqrt function", "double x = sqrt(16);", true),
+                ("abs function", "int x = abs(-5);", true),
+
+                // NEW TESTS: Break and continue
+                ("Break in loop", "int i = 0; while (i < 10) { if (i == 5) { break; } i++; }", true),
+                ("Continue in loop", "int sum = 0; for (int i = 0; i < 10; i++) { if (i % 2 == 0) { continue; } sum += i; }", true),
+
                 // Error tests (should fail)
                 ("Error: undeclared variable", "x = 5;", false),
                 ("Error: duplicate declaration", "int a; int a;", false),
@@ -354,7 +417,8 @@ namespace CompilatorLFT
 
                 if (!hasParseErrors)
                 {
-                    var evaluator = new Evaluator(parser.SymbolTable);
+                    var funcs = new Dictionary<string, CompilatorLFT.Models.Statements.FunctionDeclaration>(parser.Functions);
+                    var evaluator = new Evaluator(parser.SymbolTable, funcs);
                     evaluator.ExecuteProgram(program);
 
                     bool hasEvalErrors = evaluator.Errors.Any();
@@ -427,28 +491,56 @@ int b = 3;
 int sum = a + b;
 sum * 2;
 "),
-                ("Control structures", @"
+                ("Control structures with i++", @"
 int sum = 0;
-for (int i = 1; i <= 10; i = i + 1) {
-    sum = sum + i;
+for (int i = 1; i <= 10; i++) {
+    sum += i;
 }
-sum;
+print(sum);
 "),
-                ("Conditionals", @"
+                ("Conditionals with logical operators", @"
 int x = 7;
 int result;
-if (x > 5) {
+if (x > 5 && x < 10) {
     result = 100;
 } else {
     result = 0;
 }
-result;
+print(result);
 "),
-                ("Strings", @"
-string greeting = ""Hello"";
-string name = "" World"";
-string message = greeting + name;
-message;
+                ("User-defined function", @"
+function factorial(int n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+int result = factorial(5);
+print(result);  // Should print 120
+"),
+                ("Built-in functions", @"
+double x = sqrt(16);
+double y = abs(-5);
+print(x);  // Should print 4
+print(y);  // Should print 5
+"),
+                ("Break and continue", @"
+int sum = 0;
+for (int i = 0; i < 10; i++) {
+    if (i == 5) {
+        break;
+    }
+    sum += i;
+}
+print(sum);  // 0+1+2+3+4 = 10
+"),
+                ("Comments", @"
+// This is a single-line comment
+int a = 5;  // Inline comment
+/* This is a
+   multi-line comment */
+int b = 3;
+print(a + b);
 ")
             };
 

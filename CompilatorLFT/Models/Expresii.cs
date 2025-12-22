@@ -256,4 +256,275 @@ namespace CompilatorLFT.Models.Expressions
     }
 
     #endregion
+
+    #region Boolean and Logical Expressions
+
+    /// <summary>
+    /// Expression for a boolean literal (true/false).
+    /// </summary>
+    /// <example>
+    /// true, false
+    /// </example>
+    public sealed class BooleanExpression : Expression
+    {
+        /// <summary>The lexical token containing the boolean value.</summary>
+        public Token BoolToken { get; }
+
+        /// <summary>The boolean value.</summary>
+        public bool Value { get; }
+
+        public override TokenType Type => TokenType.BooleanExpression;
+
+        public BooleanExpression(Token boolToken)
+        {
+            BoolToken = boolToken ?? throw new ArgumentNullException(nameof(boolToken));
+
+            if (boolToken.Type != TokenType.KeywordTrue && boolToken.Type != TokenType.KeywordFalse)
+            {
+                throw new ArgumentException(
+                    "Token must be KeywordTrue or KeywordFalse",
+                    nameof(boolToken));
+            }
+
+            Value = boolToken.Type == TokenType.KeywordTrue;
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return BoolToken;
+        }
+    }
+
+    /// <summary>
+    /// Logical expression (&&, ||).
+    /// </summary>
+    /// <remarks>
+    /// Implements short-circuit evaluation.
+    /// Examples: a && b, x || y, (a > 5) && (b < 10)
+    /// </remarks>
+    public sealed class LogicalExpression : Expression
+    {
+        /// <summary>The expression on the left of the operator.</summary>
+        public Expression Left { get; }
+
+        /// <summary>The logical operator (&& or ||).</summary>
+        public Token Operator { get; }
+
+        /// <summary>The expression on the right of the operator.</summary>
+        public Expression Right { get; }
+
+        public override TokenType Type => TokenType.LogicalExpression;
+
+        public LogicalExpression(Expression left, Token operatorToken, Expression right)
+        {
+            Left = left ?? throw new ArgumentNullException(nameof(left));
+            Operator = operatorToken ?? throw new ArgumentNullException(nameof(operatorToken));
+            Right = right ?? throw new ArgumentNullException(nameof(right));
+
+            if (operatorToken.Type != TokenType.LogicalAnd &&
+                operatorToken.Type != TokenType.LogicalOr)
+            {
+                throw new ArgumentException(
+                    "Operator must be && or ||",
+                    nameof(operatorToken));
+            }
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Left;
+            yield return Operator;
+            yield return Right;
+        }
+    }
+
+    /// <summary>
+    /// Logical NOT expression (!expr).
+    /// </summary>
+    public sealed class NotExpression : Expression
+    {
+        /// <summary>The NOT operator (!).</summary>
+        public Token Operator { get; }
+
+        /// <summary>The expression to negate.</summary>
+        public Expression Operand { get; }
+
+        public override TokenType Type => TokenType.UnaryExpression;
+
+        public NotExpression(Token operatorToken, Expression operand)
+        {
+            Operator = operatorToken ?? throw new ArgumentNullException(nameof(operatorToken));
+            Operand = operand ?? throw new ArgumentNullException(nameof(operand));
+
+            if (operatorToken.Type != TokenType.LogicalNot)
+            {
+                throw new ArgumentException(
+                    "Operator must be !",
+                    nameof(operatorToken));
+            }
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Operator;
+            yield return Operand;
+        }
+    }
+
+    #endregion
+
+    #region Function Call Expression
+
+    /// <summary>
+    /// Function call expression.
+    /// </summary>
+    /// <example>
+    /// add(5, 3), print("hello"), sqrt(16)
+    /// </example>
+    public sealed class FunctionCallExpression : Expression
+    {
+        /// <summary>The function name.</summary>
+        public Token FunctionName { get; }
+
+        /// <summary>Open parenthesis '('.</summary>
+        public Token OpenParen { get; }
+
+        /// <summary>The list of argument expressions.</summary>
+        public List<Expression> Arguments { get; }
+
+        /// <summary>Close parenthesis ')'.</summary>
+        public Token CloseParen { get; }
+
+        public override TokenType Type => TokenType.FunctionCallExpression;
+
+        public FunctionCallExpression(
+            Token functionName,
+            Token openParen,
+            List<Expression> arguments,
+            Token closeParen)
+        {
+            FunctionName = functionName ?? throw new ArgumentNullException(nameof(functionName));
+            OpenParen = openParen ?? throw new ArgumentNullException(nameof(openParen));
+            Arguments = arguments ?? new List<Expression>();
+            CloseParen = closeParen ?? throw new ArgumentNullException(nameof(closeParen));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return FunctionName;
+            yield return OpenParen;
+            foreach (var arg in Arguments)
+                yield return arg;
+            yield return CloseParen;
+        }
+    }
+
+    #endregion
+
+    #region Increment/Decrement Expressions
+
+    /// <summary>
+    /// Increment or decrement expression (++, --).
+    /// </summary>
+    /// <example>
+    /// i++, ++i, j--, --j
+    /// </example>
+    public sealed class IncrementExpression : Expression
+    {
+        /// <summary>The variable being incremented/decremented.</summary>
+        public Token Identifier { get; }
+
+        /// <summary>The operator (++ or --).</summary>
+        public Token Operator { get; }
+
+        /// <summary>True if prefix (++i), false if postfix (i++).</summary>
+        public bool IsPrefix { get; }
+
+        /// <summary>True if increment (++), false if decrement (--).</summary>
+        public bool IsIncrement { get; }
+
+        public override TokenType Type => TokenType.IncrementExpression;
+
+        public IncrementExpression(Token identifier, Token operatorToken, bool isPrefix)
+        {
+            Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+            Operator = operatorToken ?? throw new ArgumentNullException(nameof(operatorToken));
+            IsPrefix = isPrefix;
+            IsIncrement = operatorToken.Type == TokenType.PlusPlus;
+
+            if (identifier.Type != TokenType.Identifier)
+            {
+                throw new ArgumentException("Must be an identifier", nameof(identifier));
+            }
+
+            if (operatorToken.Type != TokenType.PlusPlus &&
+                operatorToken.Type != TokenType.MinusMinus)
+            {
+                throw new ArgumentException("Operator must be ++ or --", nameof(operatorToken));
+            }
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            if (IsPrefix)
+            {
+                yield return Operator;
+                yield return Identifier;
+            }
+            else
+            {
+                yield return Identifier;
+                yield return Operator;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Array Access Expression
+
+    /// <summary>
+    /// Array access expression.
+    /// </summary>
+    /// <example>
+    /// arr[0], matrix[i][j]
+    /// </example>
+    public sealed class ArrayAccessExpression : Expression
+    {
+        /// <summary>The array expression being indexed.</summary>
+        public Expression Array { get; }
+
+        /// <summary>Open bracket '['.</summary>
+        public Token OpenBracket { get; }
+
+        /// <summary>The index expression.</summary>
+        public Expression Index { get; }
+
+        /// <summary>Close bracket ']'.</summary>
+        public Token CloseBracket { get; }
+
+        public override TokenType Type => TokenType.ArrayAccessExpression;
+
+        public ArrayAccessExpression(
+            Expression array,
+            Token openBracket,
+            Expression index,
+            Token closeBracket)
+        {
+            Array = array ?? throw new ArgumentNullException(nameof(array));
+            OpenBracket = openBracket ?? throw new ArgumentNullException(nameof(openBracket));
+            Index = index ?? throw new ArgumentNullException(nameof(index));
+            CloseBracket = closeBracket ?? throw new ArgumentNullException(nameof(closeBracket));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Array;
+            yield return OpenBracket;
+            yield return Index;
+            yield return CloseBracket;
+        }
+    }
+
+    #endregion
 }

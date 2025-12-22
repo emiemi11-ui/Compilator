@@ -136,24 +136,61 @@ namespace CompilatorLFT.Models
         /// <summary>
         /// Checks if the token is a type keyword.
         /// </summary>
-        /// <returns>True if int, double or string</returns>
+        /// <returns>True if int, double, string, bool or void</returns>
         public bool IsTypeKeyword()
         {
             return Type == TokenType.KeywordInt ||
                    Type == TokenType.KeywordDouble ||
-                   Type == TokenType.KeywordString;
+                   Type == TokenType.KeywordString ||
+                   Type == TokenType.KeywordBool ||
+                   Type == TokenType.KeywordVoid;
         }
 
         /// <summary>
         /// Checks if the token is an arithmetic operator.
         /// </summary>
-        /// <returns>True if +, -, *, /</returns>
+        /// <returns>True if +, -, *, /, %</returns>
         public bool IsArithmeticOperator()
         {
             return Type == TokenType.Plus ||
                    Type == TokenType.Minus ||
                    Type == TokenType.Star ||
-                   Type == TokenType.Slash;
+                   Type == TokenType.Slash ||
+                   Type == TokenType.Percent;
+        }
+
+        /// <summary>
+        /// Checks if the token is a logical operator.
+        /// </summary>
+        /// <returns>True if &&, ||, !</returns>
+        public bool IsLogicalOperator()
+        {
+            return Type == TokenType.LogicalAnd ||
+                   Type == TokenType.LogicalOr ||
+                   Type == TokenType.LogicalNot;
+        }
+
+        /// <summary>
+        /// Checks if the token is a compound assignment operator.
+        /// </summary>
+        /// <returns>True if +=, -=, *=, /=, %=</returns>
+        public bool IsCompoundAssignment()
+        {
+            return Type == TokenType.PlusEqual ||
+                   Type == TokenType.MinusEqual ||
+                   Type == TokenType.StarEqual ||
+                   Type == TokenType.SlashEqual ||
+                   Type == TokenType.PercentEqual;
+        }
+
+        /// <summary>
+        /// Checks if the token is an increment/decrement operator.
+        /// </summary>
+        /// <returns>True if ++ or --</returns>
+        public bool IsIncrementDecrement()
+        {
+            return Type == TokenType.PlusPlus ||
+                   Type == TokenType.MinusMinus;
         }
 
         /// <summary>

@@ -29,13 +29,26 @@ namespace CompilatorLFT.Core
         // Keywords
         private static readonly Dictionary<string, TokenType> Keywords = new Dictionary<string, TokenType>
         {
+            // Type keywords
             { "int", TokenType.KeywordInt },
             { "double", TokenType.KeywordDouble },
             { "string", TokenType.KeywordString },
+            { "void", TokenType.KeywordVoid },
+            { "bool", TokenType.KeywordBool },
+            // Control flow keywords
             { "for", TokenType.KeywordFor },
             { "while", TokenType.KeywordWhile },
             { "if", TokenType.KeywordIf },
-            { "else", TokenType.KeywordElse }
+            { "else", TokenType.KeywordElse },
+            { "break", TokenType.KeywordBreak },
+            { "continue", TokenType.KeywordContinue },
+            { "return", TokenType.KeywordReturn },
+            // Function and output keywords
+            { "function", TokenType.KeywordFunction },
+            { "print", TokenType.KeywordPrint },
+            // Boolean literals
+            { "true", TokenType.KeywordTrue },
+            { "false", TokenType.KeywordFalse }
         };
 
         #endregion
@@ -113,6 +126,18 @@ namespace CompilatorLFT.Core
                 return TokenizeWhitespace();
             }
 
+            // SINGLE-LINE COMMENTS (// ...)
+            if (CurrentChar == '/' && NextChar == '/')
+            {
+                return SkipSingleLineComment();
+            }
+
+            // MULTI-LINE COMMENTS (/* ... */)
+            if (CurrentChar == '/' && NextChar == '*')
+            {
+                return SkipMultiLineComment();
+            }
+
             // NUMBERS
             if (char.IsDigit(CurrentChar))
             {
@@ -133,6 +158,69 @@ namespace CompilatorLFT.Core
 
             // OPERATORS AND DELIMITERS
             return TokenizeOperatorOrDelimiter();
+        }
+
+        /// <summary>
+        /// Skips a single-line comment (// ...).
+        /// </summary>
+        private Token SkipSingleLineComment()
+        {
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
+
+            // Skip //
+            Advance();
+            Advance();
+
+            // Skip until end of line or end of file
+            while (CurrentChar != '\n' && CurrentChar != '\0')
+            {
+                Advance();
+            }
+
+            // Return whitespace token (will be skipped)
+            return new Token(
+                TokenType.Whitespace, "//comment", null,
+                lineStart, columnStart, start);
+        }
+
+        /// <summary>
+        /// Skips a multi-line comment (/* ... */).
+        /// </summary>
+        private Token SkipMultiLineComment()
+        {
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
+
+            // Skip /*
+            Advance();
+            Advance();
+
+            // Skip until */ or end of file
+            while (!(CurrentChar == '*' && NextChar == '/') && CurrentChar != '\0')
+            {
+                Advance();
+            }
+
+            if (CurrentChar == '\0')
+            {
+                _errors.Add(CompilationError.Lexical(
+                    lineStart, columnStart,
+                    "unclosed multi-line comment"));
+            }
+            else
+            {
+                // Skip */
+                Advance();
+                Advance();
+            }
+
+            // Return whitespace token (will be skipped)
+            return new Token(
+                TokenType.Whitespace, "/*comment*/", null,
+                lineStart, columnStart, start);
         }
 
         /// <summary>
@@ -303,7 +391,9 @@ namespace CompilatorLFT.Core
             int columnStart = _column;
             char c = CurrentChar;
 
-            // TWO-CHARACTER OPERATORS (<=, >=, ==, !=)
+            // TWO-CHARACTER OPERATORS
+
+            // Comparison operators
             if (c == '<' && NextChar == '=')
             {
                 Advance(); Advance();
@@ -333,6 +423,75 @@ namespace CompilatorLFT.Core
                     lineStart, columnStart, start);
             }
 
+            // Logical operators
+            if (c == '&' && NextChar == '&')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.LogicalAnd, "&&",
+                    lineStart, columnStart, start);
+            }
+            if (c == '|' && NextChar == '|')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.LogicalOr, "||",
+                    lineStart, columnStart, start);
+            }
+
+            // Increment/Decrement operators
+            if (c == '+' && NextChar == '+')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.PlusPlus, "++",
+                    lineStart, columnStart, start);
+            }
+            if (c == '-' && NextChar == '-')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.MinusMinus, "--",
+                    lineStart, columnStart, start);
+            }
+
+            // Compound assignment operators
+            if (c == '+' && NextChar == '=')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.PlusEqual, "+=",
+                    lineStart, columnStart, start);
+            }
+            if (c == '-' && NextChar == '=')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.MinusEqual, "-=",
+                    lineStart, columnStart, start);
+            }
+            if (c == '*' && NextChar == '=')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.StarEqual, "*=",
+                    lineStart, columnStart, start);
+            }
+            if (c == '/' && NextChar == '=')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.SlashEqual, "/=",
+                    lineStart, columnStart, start);
+            }
+            if (c == '%' && NextChar == '=')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.PercentEqual, "%=",
+                    lineStart, columnStart, start);
+            }
+
             // SINGLE-CHARACTER OPERATORS AND DELIMITERS
             TokenType type = c switch
             {
@@ -340,15 +499,20 @@ namespace CompilatorLFT.Core
                 '-' => TokenType.Minus,
                 '*' => TokenType.Star,
                 '/' => TokenType.Slash,
+                '%' => TokenType.Percent,
                 '<' => TokenType.LessThan,
                 '>' => TokenType.GreaterThan,
                 '=' => TokenType.Equal,
+                '!' => TokenType.LogicalNot,
                 ';' => TokenType.Semicolon,
                 ',' => TokenType.Comma,
+                ':' => TokenType.Colon,
                 '(' => TokenType.OpenParen,
                 ')' => TokenType.CloseParen,
                 '{' => TokenType.OpenBrace,
                 '}' => TokenType.CloseBrace,
+                '[' => TokenType.OpenBracket,
+                ']' => TokenType.CloseBracket,
                 _ => TokenType.Invalid
             };
 
