@@ -785,10 +785,13 @@ namespace CompilatorLFT.Core
                 var argValue = EvaluateExpression(call.Arguments[i]);
 
                 // Save old value if variable exists
+                int paramLine = param.Identifier.Line;
+                int paramCol = param.Identifier.Column;
+
                 if (_symbolTable.Exists(param.Identifier.Text))
                 {
                     oldValues[param.Identifier.Text] = (
-                        _symbolTable.GetValue(param.Identifier.Text, 0, 0, new List<CompilationError>()),
+                        _symbolTable.GetValue(param.Identifier.Text, paramLine, paramCol, new List<CompilationError>()),
                         true
                     );
                 }
@@ -796,11 +799,11 @@ namespace CompilatorLFT.Core
                 {
                     oldValues[param.Identifier.Text] = (null, false);
                     var dataType = SymbolTable.ConvertToDataType(param.TypeKeyword.Type);
-                    _symbolTable.Add(param.Identifier.Text, dataType, 0, 0, new List<CompilationError>());
+                    _symbolTable.Add(param.Identifier.Text, dataType, paramLine, paramCol, new List<CompilationError>());
                 }
 
                 // Set parameter value
-                _symbolTable.SetValue(param.Identifier.Text, argValue, 0, 0, new List<CompilationError>());
+                _symbolTable.SetValue(param.Identifier.Text, argValue, paramLine, paramCol, new List<CompilationError>());
             }
 
             try
@@ -820,7 +823,7 @@ namespace CompilatorLFT.Core
                 {
                     if (kvp.Value.existed)
                     {
-                        _symbolTable.SetValue(kvp.Key, kvp.Value.value, 0, 0, new List<CompilationError>());
+                        _symbolTable.SetValue(kvp.Key, kvp.Value.value, 1, 1, new List<CompilationError>());
                     }
                 }
             }
