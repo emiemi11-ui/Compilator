@@ -6,273 +6,273 @@ using CompilatorLFT.Models;
 namespace CompilatorLFT.Models
 {
     /// <summary>
-    /// Reprezintă un atom lexical (token) cu informații complete despre poziție și valoare.
+    /// Represents a lexical token with complete position and value information.
     /// </summary>
     /// <remarks>
-    /// Referință: Dragon Book, Cap. 3 - "Tokens, Patterns, and Lexemes"
-    /// Un token este o pereche (token-name, attribute-value) unde:
-    /// - token-name = tipul atomului lexical
-    /// - attribute-value = valoarea asociată (număr, string, identificator)
+    /// Reference: Dragon Book, Ch. 3 - "Tokens, Patterns, and Lexemes"
+    /// A token is a pair (token-name, attribute-value) where:
+    /// - token-name = the type of lexical token
+    /// - attribute-value = the associated value (number, string, identifier)
     /// </remarks>
-    public class AtomLexical : NodSintactic
+    public class Token : SyntaxNode
     {
-        #region Proprietăți
+        #region Properties
 
         /// <summary>
-        /// Tipul atomului lexical.
+        /// The type of lexical token.
         /// </summary>
-        public override TipAtomLexical Tip { get; }
+        public override TokenType Type { get; }
 
         /// <summary>
-        /// Textul original din sursă (lexemul).
+        /// The original text from source (the lexeme).
         /// </summary>
         /// <example>
-        /// Pentru "int a = 123;":
-        /// - "int" → lexem pentru CuvantCheieInt
-        /// - "a" → lexem pentru Identificator
-        /// - "123" → lexem pentru NumarIntreg
+        /// For "int a = 123;":
+        /// - "int" → lexeme for KeywordInt
+        /// - "a" → lexeme for Identifier
+        /// - "123" → lexeme for IntegerNumber
         /// </example>
         public string Text { get; }
 
         /// <summary>
-        /// Valoarea parsată a atomului (null pentru operatori/delimitatori).
+        /// The parsed value of the token (null for operators/delimiters).
         /// </summary>
         /// <remarks>
-        /// Tipuri posibile:
-        /// - int pentru NumarIntreg
-        /// - double pentru NumarZecimal
-        /// - string pentru StringLiteral și Identificator
-        /// - null pentru operatori și delimitatori
+        /// Possible types:
+        /// - int for IntegerNumber
+        /// - double for DecimalNumber
+        /// - string for StringLiteral and Identifier
+        /// - null for operators and delimiters
         /// </remarks>
-        public object Valoare { get; }
+        public object Value { get; }
 
         /// <summary>
-        /// Numărul liniei unde apare atomul (indexare de la 1).
+        /// The line number where the token appears (1-indexed).
         /// </summary>
-        public int Linie { get; }
+        public int Line { get; }
 
         /// <summary>
-        /// Numărul coloanei unde începe atomul (indexare de la 1).
+        /// The column number where the token starts (1-indexed).
         /// </summary>
-        public int Coloana { get; }
+        public int Column { get; }
 
         /// <summary>
-        /// Poziția absolută în textul sursă (indexare de la 0).
+        /// The absolute position in source text (0-indexed).
         /// </summary>
-        public int PozitieAbsoluta { get; }
+        public int AbsolutePosition { get; }
 
         /// <summary>
-        /// Lungimea atomului în caractere.
+        /// The length of the token in characters.
         /// </summary>
-        public int Lungime => Text?.Length ?? 0;
+        public int Length => Text?.Length ?? 0;
 
         #endregion
 
-        #region Constructori
+        #region Constructors
 
         /// <summary>
-        /// Inițializează un nou atom lexical cu informații complete de poziție.
+        /// Initializes a new lexical token with complete position information.
         /// </summary>
-        /// <param name="tip">Tipul atomului lexical</param>
-        /// <param name="text">Textul original (lexemul)</param>
-        /// <param name="valoare">Valoarea parsată (poate fi null)</param>
-        /// <param name="linie">Numărul liniei (de la 1)</param>
-        /// <param name="coloana">Numărul coloanei (de la 1)</param>
-        /// <param name="pozitieAbsoluta">Poziția absolută în text (de la 0)</param>
+        /// <param name="type">The type of lexical token</param>
+        /// <param name="text">The original text (lexeme)</param>
+        /// <param name="value">The parsed value (can be null)</param>
+        /// <param name="line">The line number (from 1)</param>
+        /// <param name="column">The column number (from 1)</param>
+        /// <param name="absolutePosition">The absolute position in text (from 0)</param>
         /// <exception cref="ArgumentException">
-        /// Dacă linia sau coloana sunt invalide
+        /// If line or column are invalid
         /// </exception>
-        public AtomLexical(
-            TipAtomLexical tip,
+        public Token(
+            TokenType type,
             string text,
-            object valoare,
-            int linie,
-            int coloana,
-            int pozitieAbsoluta)
+            object value,
+            int line,
+            int column,
+            int absolutePosition)
         {
-            if (linie < 1)
-                throw new ArgumentException("Linia trebuie să fie >= 1", nameof(linie));
-            
-            if (coloana < 1)
-                throw new ArgumentException("Coloana trebuie să fie >= 1", nameof(coloana));
-            
-            if (pozitieAbsoluta < 0)
-                throw new ArgumentException("Poziția absolută trebuie să fie >= 0", nameof(pozitieAbsoluta));
+            if (line < 1)
+                throw new ArgumentException("Line must be >= 1", nameof(line));
 
-            Tip = tip;
+            if (column < 1)
+                throw new ArgumentException("Column must be >= 1", nameof(column));
+
+            if (absolutePosition < 0)
+                throw new ArgumentException("Absolute position must be >= 0", nameof(absolutePosition));
+
+            Type = type;
             Text = text ?? string.Empty;
-            Valoare = valoare;
-            Linie = linie;
-            Coloana = coloana;
-            PozitieAbsoluta = pozitieAbsoluta;
+            Value = value;
+            Line = line;
+            Column = column;
+            AbsolutePosition = absolutePosition;
         }
 
         #endregion
 
-        #region Implementare NodSintactic
+        #region SyntaxNode Implementation
 
         /// <summary>
-        /// Atomul lexical este frunză în arborele sintactic (nu are copii).
+        /// The lexical token is a leaf in the syntax tree (has no children).
         /// </summary>
-        public override IEnumerable<NodSintactic> ObtineCopii()
+        public override IEnumerable<SyntaxNode> GetChildren()
         {
-            return Enumerable.Empty<NodSintactic>();
+            return Enumerable.Empty<SyntaxNode>();
         }
 
         #endregion
 
-        #region Metode publice
+        #region Public Methods
 
         /// <summary>
-        /// Returnează reprezentarea textuală a atomului pentru debugging.
+        /// Returns the textual representation of the token for debugging.
         /// </summary>
-        /// <returns>String cu tip, text și valoare</returns>
+        /// <returns>String with type, text and value</returns>
         public override string ToString()
         {
-            string valoareStr = Valoare != null ? $" = {Valoare}" : "";
-            return $"{Tip} '{Text}'{valoareStr} @ ({Linie}:{Coloana})";
+            string valueStr = Value != null ? $" = {Value}" : "";
+            return $"{Type} '{Text}'{valueStr} @ ({Line}:{Column})";
         }
 
         /// <summary>
-        /// Verifică dacă atomul este un cuvânt cheie pentru tip de date.
+        /// Checks if the token is a type keyword.
         /// </summary>
-        /// <returns>True dacă este int, double sau string</returns>
-        public bool EsteCuvantCheieTip()
+        /// <returns>True if int, double or string</returns>
+        public bool IsTypeKeyword()
         {
-            return Tip == TipAtomLexical.CuvantCheieInt ||
-                   Tip == TipAtomLexical.CuvantCheieDouble ||
-                   Tip == TipAtomLexical.CuvantCheieString;
+            return Type == TokenType.KeywordInt ||
+                   Type == TokenType.KeywordDouble ||
+                   Type == TokenType.KeywordString;
         }
 
         /// <summary>
-        /// Verifică dacă atomul este un operator aritmetic.
+        /// Checks if the token is an arithmetic operator.
         /// </summary>
-        /// <returns>True dacă este +, -, *, /</returns>
-        public bool EsteOperatorAritmetic()
+        /// <returns>True if +, -, *, /</returns>
+        public bool IsArithmeticOperator()
         {
-            return Tip == TipAtomLexical.Plus ||
-                   Tip == TipAtomLexical.Minus ||
-                   Tip == TipAtomLexical.Star ||
-                   Tip == TipAtomLexical.Slash;
+            return Type == TokenType.Plus ||
+                   Type == TokenType.Minus ||
+                   Type == TokenType.Star ||
+                   Type == TokenType.Slash;
         }
 
         /// <summary>
-        /// Verifică dacă atomul este un operator relațional.
+        /// Checks if the token is a relational operator.
         /// </summary>
-        /// <returns>True dacă este &lt;, &gt;, &lt;=, &gt;=, ==, !=</returns>
-        public bool EsteOperatorRelational()
+        /// <returns>True if &lt;, &gt;, &lt;=, &gt;=, ==, !=</returns>
+        public bool IsRelationalOperator()
         {
-            return Tip == TipAtomLexical.MaiMic ||
-                   Tip == TipAtomLexical.MaiMare ||
-                   Tip == TipAtomLexical.MaiMicEgal ||
-                   Tip == TipAtomLexical.MaiMareEgal ||
-                   Tip == TipAtomLexical.EgalEgal ||
-                   Tip == TipAtomLexical.Diferit;
+            return Type == TokenType.LessThan ||
+                   Type == TokenType.GreaterThan ||
+                   Type == TokenType.LessThanOrEqual ||
+                   Type == TokenType.GreaterThanOrEqual ||
+                   Type == TokenType.EqualEqual ||
+                   Type == TokenType.NotEqual;
         }
 
         /// <summary>
-        /// Verifică dacă atomul este un literal (număr sau string).
+        /// Checks if the token is a literal (number or string).
         /// </summary>
-        /// <returns>True dacă este NumarIntreg, NumarZecimal sau StringLiteral</returns>
-        public bool EsteLiteral()
+        /// <returns>True if IntegerNumber, DecimalNumber or StringLiteral</returns>
+        public bool IsLiteral()
         {
-            return Tip == TipAtomLexical.NumarIntreg ||
-                   Tip == TipAtomLexical.NumarZecimal ||
-                   Tip == TipAtomLexical.StringLiteral;
+            return Type == TokenType.IntegerNumber ||
+                   Type == TokenType.DecimalNumber ||
+                   Type == TokenType.StringLiteral;
         }
 
         /// <summary>
-        /// Obține tipul de date asociat acestui atom lexical.
+        /// Gets the data type associated with this lexical token.
         /// </summary>
-        /// <returns>Tipul de date sau Necunoscut</returns>
-        public TipDat ObtineTipDat()
+        /// <returns>The data type or Unknown</returns>
+        public DataType GetDataType()
         {
-            return Tip switch
+            return Type switch
             {
-                TipAtomLexical.NumarIntreg => TipDat.Int,
-                TipAtomLexical.NumarZecimal => TipDat.Double,
-                TipAtomLexical.StringLiteral => TipDat.String,
-                TipAtomLexical.CuvantCheieInt => TipDat.Int,
-                TipAtomLexical.CuvantCheieDouble => TipDat.Double,
-                TipAtomLexical.CuvantCheieString => TipDat.String,
-                _ => TipDat.Necunoscut
+                TokenType.IntegerNumber => DataType.Int,
+                TokenType.DecimalNumber => DataType.Double,
+                TokenType.StringLiteral => DataType.String,
+                TokenType.KeywordInt => DataType.Int,
+                TokenType.KeywordDouble => DataType.Double,
+                TokenType.KeywordString => DataType.String,
+                _ => DataType.Unknown
             };
         }
 
         /// <summary>
-        /// Compară doi atomi lexicali pentru egalitate.
+        /// Compares two lexical tokens for equality.
         /// </summary>
         public override bool Equals(object obj)
         {
-            if (obj is AtomLexical alt)
+            if (obj is Token other)
             {
-                return Tip == alt.Tip &&
-                       Text == alt.Text &&
-                       Equals(Valoare, alt.Valoare) &&
-                       Linie == alt.Linie &&
-                       Coloana == alt.Coloana;
+                return Type == other.Type &&
+                       Text == other.Text &&
+                       Equals(Value, other.Value) &&
+                       Line == other.Line &&
+                       Column == other.Column;
             }
             return false;
         }
 
         /// <summary>
-        /// Returnează hash code pentru atom.
+        /// Returns hash code for the token.
         /// </summary>
         public override int GetHashCode()
         {
-            return HashCode.Combine(Tip, Text, Valoare, Linie, Coloana);
+            return HashCode.Combine(Type, Text, Value, Line, Column);
         }
 
         #endregion
 
-        #region Factory Methods (pentru ușurință de creare)
+        #region Factory Methods (for ease of creation)
 
         /// <summary>
-        /// Creează un atom lexical pentru un număr întreg.
+        /// Creates a lexical token for an integer number.
         /// </summary>
-        public static AtomLexical NumarInt(string text, int valoare, int linie, int coloana, int pozitie)
+        public static Token IntNumber(string text, int value, int line, int column, int position)
         {
-            return new AtomLexical(TipAtomLexical.NumarIntreg, text, valoare, linie, coloana, pozitie);
+            return new Token(TokenType.IntegerNumber, text, value, line, column, position);
         }
 
         /// <summary>
-        /// Creează un atom lexical pentru un număr zecimal.
+        /// Creates a lexical token for a decimal number.
         /// </summary>
-        public static AtomLexical NumarDouble(string text, double valoare, int linie, int coloana, int pozitie)
+        public static Token DoubleNumber(string text, double value, int line, int column, int position)
         {
-            return new AtomLexical(TipAtomLexical.NumarZecimal, text, valoare, linie, coloana, pozitie);
+            return new Token(TokenType.DecimalNumber, text, value, line, column, position);
         }
 
         /// <summary>
-        /// Creează un atom lexical pentru un string literal.
+        /// Creates a lexical token for a string literal.
         /// </summary>
-        public static AtomLexical String(string text, int linie, int coloana, int pozitie)
+        public static Token String(string text, int line, int column, int position)
         {
-            return new AtomLexical(TipAtomLexical.StringLiteral, text, text, linie, coloana, pozitie);
+            return new Token(TokenType.StringLiteral, text, text, line, column, position);
         }
 
         /// <summary>
-        /// Creează un atom lexical pentru un identificator.
+        /// Creates a lexical token for an identifier.
         /// </summary>
-        public static AtomLexical Id(string nume, int linie, int coloana, int pozitie)
+        public static Token Id(string name, int line, int column, int position)
         {
-            return new AtomLexical(TipAtomLexical.Identificator, nume, nume, linie, coloana, pozitie);
+            return new Token(TokenType.Identifier, name, name, line, column, position);
         }
 
         /// <summary>
-        /// Creează un atom lexical pentru un operator sau delimitator (fără valoare).
+        /// Creates a lexical token for an operator or delimiter (no value).
         /// </summary>
-        public static AtomLexical Operator(TipAtomLexical tip, string text, int linie, int coloana, int pozitie)
+        public static Token Operator(TokenType type, string text, int line, int column, int position)
         {
-            return new AtomLexical(tip, text, null, linie, coloana, pozitie);
+            return new Token(type, text, null, line, column, position);
         }
 
         /// <summary>
-        /// Creează un atom lexical terminator.
+        /// Creates an end-of-file token.
         /// </summary>
-        public static AtomLexical Eof(int linie, int coloana, int pozitie)
+        public static Token Eof(int line, int column, int position)
         {
-            return new AtomLexical(TipAtomLexical.Terminator, "\0", null, linie, coloana, pozitie);
+            return new Token(TokenType.EndOfFile, "\0", null, line, column, position);
         }
 
         #endregion

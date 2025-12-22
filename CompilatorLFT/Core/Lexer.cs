@@ -8,410 +8,410 @@ using CompilatorLFT.Utils;
 namespace CompilatorLFT.Core
 {
     /// <summary>
-    /// Analizator lexical care transforma textul sursa in stream de tokeni.
+    /// Lexical analyzer that transforms source text into a stream of tokens.
     /// </summary>
     /// <remarks>
-    /// Referinta: Dragon Book, Cap. 3 - Lexical Analysis
+    /// Reference: Dragon Book, Ch. 3 - Lexical Analysis
     /// </remarks>
     public class Lexer
     {
-        #region Campuri private
+        #region Private Fields
 
         private readonly string _text;
-        private int _pozitie;
-        private int _linie;
-        private int _coloana;
-        private readonly List<EroareCompilare> _erori;
+        private int _position;
+        private int _line;
+        private int _column;
+        private readonly List<CompilationError> _errors;
 
-        // Regex pentru validare identificatori
-        private static readonly Regex RegexIdentificator = new Regex(@"^[a-zA-Z_][a-zA-Z0-9_]*$");
+        // Regex for identifier validation
+        private static readonly Regex IdentifierRegex = new Regex(@"^[a-zA-Z_][a-zA-Z0-9_]*$");
 
-        // Cuvinte cheie
-        private static readonly Dictionary<string, TipAtomLexical> CuvinteChei = new Dictionary<string, TipAtomLexical>
+        // Keywords
+        private static readonly Dictionary<string, TokenType> Keywords = new Dictionary<string, TokenType>
         {
-            { "int", TipAtomLexical.CuvantCheieInt },
-            { "double", TipAtomLexical.CuvantCheieDouble },
-            { "string", TipAtomLexical.CuvantCheieString },
-            { "for", TipAtomLexical.CuvantCheieFor },
-            { "while", TipAtomLexical.CuvantCheieWhile },
-            { "if", TipAtomLexical.CuvantCheieIf },
-            { "else", TipAtomLexical.CuvantCheieElse }
+            { "int", TokenType.KeywordInt },
+            { "double", TokenType.KeywordDouble },
+            { "string", TokenType.KeywordString },
+            { "for", TokenType.KeywordFor },
+            { "while", TokenType.KeywordWhile },
+            { "if", TokenType.KeywordIf },
+            { "else", TokenType.KeywordElse }
         };
 
         #endregion
 
-        #region Proprietati
+        #region Properties
 
-        /// <summary>Caracterul curent din text.</summary>
-        private char CaracterCurent => _pozitie < _text.Length ? _text[_pozitie] : '\0';
+        /// <summary>Current character in text.</summary>
+        private char CurrentChar => _position < _text.Length ? _text[_position] : '\0';
 
-        /// <summary>Caracterul urmator din text.</summary>
-        private char CaracterUrmator => _pozitie + 1 < _text.Length ? _text[_pozitie + 1] : '\0';
+        /// <summary>Next character in text.</summary>
+        private char NextChar => _position + 1 < _text.Length ? _text[_position + 1] : '\0';
 
-        /// <summary>Lista de erori lexicale.</summary>
-        public IReadOnlyList<EroareCompilare> Erori => _erori;
+        /// <summary>List of lexical errors.</summary>
+        public IReadOnlyList<CompilationError> Errors => _errors;
 
         #endregion
 
         #region Constructor
 
         /// <summary>
-        /// Initializeaza un nou lexer pentru textul dat.
+        /// Initializes a new lexer for the given text.
         /// </summary>
-        /// <param name="text">Textul sursa de analizat</param>
+        /// <param name="text">Source text to analyze</param>
         public Lexer(string text)
         {
             _text = text ?? string.Empty;
-            _pozitie = 0;
-            _linie = 1;
-            _coloana = 1;
-            _erori = new List<EroareCompilare>();
+            _position = 0;
+            _line = 1;
+            _column = 1;
+            _errors = new List<CompilationError>();
         }
 
         #endregion
 
-        #region Metode publice
+        #region Public Methods
 
         /// <summary>
-        /// Tokenizeaza intregul text si returneaza lista de tokeni.
+        /// Tokenizes the entire text and returns the list of tokens.
         /// </summary>
-        /// <returns>Lista de atomi lexicali</returns>
-        public List<AtomLexical> Tokenizeaza()
+        /// <returns>List of lexical tokens</returns>
+        public List<Token> Tokenize()
         {
-            var tokeni = new List<AtomLexical>();
+            var tokens = new List<Token>();
 
-            while (CaracterCurent != '\0')
+            while (CurrentChar != '\0')
             {
-                var token = UrmatorulToken();
+                var token = GetNextToken();
 
-                // Skip spatii si linii noi
-                if (token.Tip != TipAtomLexical.Spatiu &&
-                    token.Tip != TipAtomLexical.LinieNoua)
+                // Skip whitespace and newlines
+                if (token.Type != TokenType.Whitespace &&
+                    token.Type != TokenType.NewLine)
                 {
-                    tokeni.Add(token);
+                    tokens.Add(token);
                 }
             }
 
-            // Adauga terminator
-            tokeni.Add(AtomLexical.Eof(_linie, _coloana, _pozitie));
+            // Add terminator
+            tokens.Add(Token.Eof(_line, _column, _position));
 
-            return tokeni;
+            return tokens;
         }
 
         #endregion
 
-        #region Metode private - Tokenizare
+        #region Private Methods - Tokenization
 
         /// <summary>
-        /// Obtine urmatorul token din stream.
+        /// Gets the next token from the stream.
         /// </summary>
-        private AtomLexical UrmatorulToken()
+        private Token GetNextToken()
         {
-            // SPATII SI LINII NOI
-            if (char.IsWhiteSpace(CaracterCurent))
+            // WHITESPACE AND NEWLINES
+            if (char.IsWhiteSpace(CurrentChar))
             {
-                return TokenizeazaSpatiu();
+                return TokenizeWhitespace();
             }
 
-            // NUMERE
-            if (char.IsDigit(CaracterCurent))
+            // NUMBERS
+            if (char.IsDigit(CurrentChar))
             {
-                return TokenizeazaNumar();
+                return TokenizeNumber();
             }
 
-            // IDENTIFICATORI SI CUVINTE CHEIE
-            if (char.IsLetter(CaracterCurent) || CaracterCurent == '_')
+            // IDENTIFIERS AND KEYWORDS
+            if (char.IsLetter(CurrentChar) || CurrentChar == '_')
             {
-                return TokenizeazaIdentificator();
+                return TokenizeIdentifier();
             }
 
-            // STRING LITERALI
-            if (CaracterCurent == '"')
+            // STRING LITERALS
+            if (CurrentChar == '"')
             {
-                return TokenizeazaString();
+                return TokenizeString();
             }
 
-            // OPERATORI SI DELIMITATORI
-            return TokenizeazaOperatorSauDelimitator();
+            // OPERATORS AND DELIMITERS
+            return TokenizeOperatorOrDelimiter();
         }
 
         /// <summary>
-        /// Tokenizeaza un numar (intreg sau zecimal).
+        /// Tokenizes a number (integer or decimal).
         /// </summary>
-        private AtomLexical TokenizeazaNumar()
+        private Token TokenizeNumber()
         {
-            int start = _pozitie;
-            int linieStart = _linie;
-            int coloanaStart = _coloana;
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
 
-            // Citeste cifre
-            while (char.IsDigit(CaracterCurent))
+            // Read digits
+            while (char.IsDigit(CurrentChar))
             {
-                Avanseaza();
+                Advance();
             }
 
-            // Verifica pentru punct zecimal
-            if (CaracterCurent == '.' && char.IsDigit(CaracterUrmator))
+            // Check for decimal point
+            if (CurrentChar == '.' && char.IsDigit(NextChar))
             {
-                // Numar zecimal
-                Avanseaza(); // Skip '.'
+                // Decimal number
+                Advance(); // Skip '.'
 
-                while (char.IsDigit(CaracterCurent))
+                while (char.IsDigit(CurrentChar))
                 {
-                    Avanseaza();
+                    Advance();
                 }
 
-                string text = _text.Substring(start, _pozitie - start);
+                string text = _text.Substring(start, _position - start);
 
                 if (double.TryParse(text, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out double valoare))
+                    System.Globalization.CultureInfo.InvariantCulture, out double value))
                 {
-                    return AtomLexical.NumarDouble(text, valoare, linieStart, coloanaStart, start);
+                    return Token.DoubleNumber(text, value, lineStart, columnStart, start);
                 }
                 else
                 {
-                    _erori.Add(EroareCompilare.Lexicala(
-                        linieStart, coloanaStart,
-                        $"numar zecimal invalid '{text}'"));
+                    _errors.Add(CompilationError.Lexical(
+                        lineStart, columnStart,
+                        $"invalid decimal number '{text}'"));
 
-                    return new AtomLexical(
-                        TipAtomLexical.Invalid, text, null,
-                        linieStart, coloanaStart, start);
+                    return new Token(
+                        TokenType.Invalid, text, null,
+                        lineStart, columnStart, start);
                 }
             }
             else
             {
-                // Numar intreg
-                string text = _text.Substring(start, _pozitie - start);
+                // Integer number
+                string text = _text.Substring(start, _position - start);
 
-                if (int.TryParse(text, out int valoare))
+                if (int.TryParse(text, out int value))
                 {
-                    return AtomLexical.NumarInt(text, valoare, linieStart, coloanaStart, start);
+                    return Token.IntNumber(text, value, lineStart, columnStart, start);
                 }
                 else
                 {
-                    _erori.Add(EroareCompilare.Lexicala(
-                        linieStart, coloanaStart,
-                        $"numar intreg invalid '{text}' (depaseste Int32.MaxValue)"));
+                    _errors.Add(CompilationError.Lexical(
+                        lineStart, columnStart,
+                        $"invalid integer '{text}' (exceeds Int32.MaxValue)"));
 
-                    return new AtomLexical(
-                        TipAtomLexical.Invalid, text, null,
-                        linieStart, coloanaStart, start);
+                    return new Token(
+                        TokenType.Invalid, text, null,
+                        lineStart, columnStart, start);
                 }
             }
         }
 
         /// <summary>
-        /// Tokenizeaza un identificator sau cuvant cheie.
+        /// Tokenizes an identifier or keyword.
         /// </summary>
-        private AtomLexical TokenizeazaIdentificator()
+        private Token TokenizeIdentifier()
         {
-            int start = _pozitie;
-            int linieStart = _linie;
-            int coloanaStart = _coloana;
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
 
-            // Citeste litere, cifre si underscore
-            while (char.IsLetterOrDigit(CaracterCurent) || CaracterCurent == '_')
+            // Read letters, digits and underscore
+            while (char.IsLetterOrDigit(CurrentChar) || CurrentChar == '_')
             {
-                Avanseaza();
+                Advance();
             }
 
-            string text = _text.Substring(start, _pozitie - start);
+            string text = _text.Substring(start, _position - start);
 
-            // Verifica daca este cuvant cheie
-            if (CuvinteChei.TryGetValue(text, out TipAtomLexical tipCuvantCheie))
+            // Check if it's a keyword
+            if (Keywords.TryGetValue(text, out TokenType keywordType))
             {
-                return new AtomLexical(
-                    tipCuvantCheie, text, text,
-                    linieStart, coloanaStart, start);
+                return new Token(
+                    keywordType, text, text,
+                    lineStart, columnStart, start);
             }
 
-            // Verifica validitate identificator
-            if (!RegexIdentificator.IsMatch(text))
+            // Check identifier validity
+            if (!IdentifierRegex.IsMatch(text))
             {
-                _erori.Add(EroareCompilare.Lexicala(
-                    linieStart, coloanaStart,
-                    $"identificator invalid '{text}'"));
+                _errors.Add(CompilationError.Lexical(
+                    lineStart, columnStart,
+                    $"invalid identifier '{text}'"));
 
-                return new AtomLexical(
-                    TipAtomLexical.Invalid, text, null,
-                    linieStart, coloanaStart, start);
+                return new Token(
+                    TokenType.Invalid, text, null,
+                    lineStart, columnStart, start);
             }
 
-            return AtomLexical.Id(text, linieStart, coloanaStart, start);
+            return Token.Id(text, lineStart, columnStart, start);
         }
 
         /// <summary>
-        /// Tokenizeaza un string literal.
+        /// Tokenizes a string literal.
         /// </summary>
-        private AtomLexical TokenizeazaString()
+        private Token TokenizeString()
         {
-            int start = _pozitie;
-            int linieStart = _linie;
-            int coloanaStart = _coloana;
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
 
-            Avanseaza(); // Skip ghilimele deschise
+            Advance(); // Skip opening quote
 
             var sb = new StringBuilder();
 
-            while (CaracterCurent != '"' && CaracterCurent != '\0')
+            while (CurrentChar != '"' && CurrentChar != '\0')
             {
-                if (CaracterCurent == '\n')
+                if (CurrentChar == '\n')
                 {
-                    _erori.Add(EroareCompilare.Lexicala(
-                        linieStart, coloanaStart,
-                        "string literal neinchis (lipseste ghilimele inchise)"));
+                    _errors.Add(CompilationError.Lexical(
+                        lineStart, columnStart,
+                        "unclosed string literal (missing closing quote)"));
 
-                    string textPartial = _text.Substring(start, _pozitie - start);
-                    return new AtomLexical(
-                        TipAtomLexical.Invalid, textPartial, null,
-                        linieStart, coloanaStart, start);
+                    string partialText = _text.Substring(start, _position - start);
+                    return new Token(
+                        TokenType.Invalid, partialText, null,
+                        lineStart, columnStart, start);
                 }
 
-                sb.Append(CaracterCurent);
-                Avanseaza();
+                sb.Append(CurrentChar);
+                Advance();
             }
 
-            if (CaracterCurent == '"')
+            if (CurrentChar == '"')
             {
-                Avanseaza(); // Skip ghilimele inchise
+                Advance(); // Skip closing quote
             }
             else
             {
-                _erori.Add(EroareCompilare.Lexicala(
-                    linieStart, coloanaStart,
-                    "string literal neinchis (lipseste ghilimele inchise)"));
+                _errors.Add(CompilationError.Lexical(
+                    lineStart, columnStart,
+                    "unclosed string literal (missing closing quote)"));
 
-                string textPartial = _text.Substring(start, _pozitie - start);
-                return new AtomLexical(
-                    TipAtomLexical.Invalid, textPartial, null,
-                    linieStart, coloanaStart, start);
+                string partialText = _text.Substring(start, _position - start);
+                return new Token(
+                    TokenType.Invalid, partialText, null,
+                    lineStart, columnStart, start);
             }
 
-            string valoare = sb.ToString();
+            string value = sb.ToString();
 
-            return AtomLexical.String(valoare, linieStart, coloanaStart, start);
+            return Token.String(value, lineStart, columnStart, start);
         }
 
         /// <summary>
-        /// Tokenizeaza un operator sau delimitator.
+        /// Tokenizes an operator or delimiter.
         /// </summary>
-        private AtomLexical TokenizeazaOperatorSauDelimitator()
+        private Token TokenizeOperatorOrDelimiter()
         {
-            int start = _pozitie;
-            int linieStart = _linie;
-            int coloanaStart = _coloana;
-            char c = CaracterCurent;
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
+            char c = CurrentChar;
 
-            // OPERATORI CU 2 CARACTERE (<=, >=, ==, !=)
-            if (c == '<' && CaracterUrmator == '=')
+            // TWO-CHARACTER OPERATORS (<=, >=, ==, !=)
+            if (c == '<' && NextChar == '=')
             {
-                Avanseaza(); Avanseaza();
-                return AtomLexical.Operator(
-                    TipAtomLexical.MaiMicEgal, "<=",
-                    linieStart, coloanaStart, start);
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.LessThanOrEqual, "<=",
+                    lineStart, columnStart, start);
             }
-            if (c == '>' && CaracterUrmator == '=')
+            if (c == '>' && NextChar == '=')
             {
-                Avanseaza(); Avanseaza();
-                return AtomLexical.Operator(
-                    TipAtomLexical.MaiMareEgal, ">=",
-                    linieStart, coloanaStart, start);
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.GreaterThanOrEqual, ">=",
+                    lineStart, columnStart, start);
             }
-            if (c == '=' && CaracterUrmator == '=')
+            if (c == '=' && NextChar == '=')
             {
-                Avanseaza(); Avanseaza();
-                return AtomLexical.Operator(
-                    TipAtomLexical.EgalEgal, "==",
-                    linieStart, coloanaStart, start);
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.EqualEqual, "==",
+                    lineStart, columnStart, start);
             }
-            if (c == '!' && CaracterUrmator == '=')
+            if (c == '!' && NextChar == '=')
             {
-                Avanseaza(); Avanseaza();
-                return AtomLexical.Operator(
-                    TipAtomLexical.Diferit, "!=",
-                    linieStart, coloanaStart, start);
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.NotEqual, "!=",
+                    lineStart, columnStart, start);
             }
 
-            // OPERATORI SI DELIMITATORI CU 1 CARACTER
-            TipAtomLexical tip = c switch
+            // SINGLE-CHARACTER OPERATORS AND DELIMITERS
+            TokenType type = c switch
             {
-                '+' => TipAtomLexical.Plus,
-                '-' => TipAtomLexical.Minus,
-                '*' => TipAtomLexical.Star,
-                '/' => TipAtomLexical.Slash,
-                '<' => TipAtomLexical.MaiMic,
-                '>' => TipAtomLexical.MaiMare,
-                '=' => TipAtomLexical.Egal,
-                ';' => TipAtomLexical.PunctVirgula,
-                ',' => TipAtomLexical.Virgula,
-                '(' => TipAtomLexical.ParantezaDeschisa,
-                ')' => TipAtomLexical.ParantezaInchisa,
-                '{' => TipAtomLexical.AcoladaDeschisa,
-                '}' => TipAtomLexical.AcoladaInchisa,
-                _ => TipAtomLexical.Invalid
+                '+' => TokenType.Plus,
+                '-' => TokenType.Minus,
+                '*' => TokenType.Star,
+                '/' => TokenType.Slash,
+                '<' => TokenType.LessThan,
+                '>' => TokenType.GreaterThan,
+                '=' => TokenType.Equal,
+                ';' => TokenType.Semicolon,
+                ',' => TokenType.Comma,
+                '(' => TokenType.OpenParen,
+                ')' => TokenType.CloseParen,
+                '{' => TokenType.OpenBrace,
+                '}' => TokenType.CloseBrace,
+                _ => TokenType.Invalid
             };
 
-            if (tip == TipAtomLexical.Invalid)
+            if (type == TokenType.Invalid)
             {
-                _erori.Add(EroareCompilare.Lexicala(
-                    linieStart, coloanaStart,
-                    $"caracter invalid '{c}'"));
+                _errors.Add(CompilationError.Lexical(
+                    lineStart, columnStart,
+                    $"invalid character '{c}'"));
             }
 
-            Avanseaza();
+            Advance();
 
-            return AtomLexical.Operator(
-                tip, c.ToString(),
-                linieStart, coloanaStart, start);
+            return Token.Operator(
+                type, c.ToString(),
+                lineStart, columnStart, start);
         }
 
         /// <summary>
-        /// Tokenizeaza spatii si linii noi.
+        /// Tokenizes whitespace and newlines.
         /// </summary>
-        private AtomLexical TokenizeazaSpatiu()
+        private Token TokenizeWhitespace()
         {
-            int start = _pozitie;
-            int linieStart = _linie;
-            int coloanaStart = _coloana;
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
 
-            bool esteLinieNoua = CaracterCurent == '\n';
+            bool isNewLine = CurrentChar == '\n';
 
-            while (char.IsWhiteSpace(CaracterCurent))
+            while (char.IsWhiteSpace(CurrentChar))
             {
-                if (CaracterCurent == '\n')
-                    esteLinieNoua = true;
-                Avanseaza();
+                if (CurrentChar == '\n')
+                    isNewLine = true;
+                Advance();
             }
 
-            string text = _text.Substring(start, _pozitie - start);
-            TipAtomLexical tip = esteLinieNoua ?
-                TipAtomLexical.LinieNoua : TipAtomLexical.Spatiu;
+            string text = _text.Substring(start, _position - start);
+            TokenType type = isNewLine ?
+                TokenType.NewLine : TokenType.Whitespace;
 
-            return new AtomLexical(
-                tip, text, null,
-                linieStart, coloanaStart, start);
+            return new Token(
+                type, text, null,
+                lineStart, columnStart, start);
         }
 
         #endregion
 
-        #region Metode helper
+        #region Helper Methods
 
         /// <summary>
-        /// Avanseaza la urmatorul caracter, actualizand linia si coloana.
+        /// Advances to the next character, updating line and column.
         /// </summary>
-        private void Avanseaza()
+        private void Advance()
         {
-            if (CaracterCurent == '\n')
+            if (CurrentChar == '\n')
             {
-                _linie++;
-                _coloana = 1;
+                _line++;
+                _column = 1;
             }
             else
             {
-                _coloana++;
+                _column++;
             }
-            _pozitie++;
+            _position++;
         }
 
         #endregion

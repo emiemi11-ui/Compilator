@@ -4,189 +4,189 @@ using CompilatorLFT.Models;
 namespace CompilatorLFT.Utils
 {
     /// <summary>
-    /// Reprezintă o eroare de compilare cu informații detaliate despre locație și tip.
+    /// Represents a compilation error with detailed location and type information.
     /// </summary>
     /// <remarks>
-    /// Format obligatoriu: "la linia X, coloana Y: eroare [tip] - [mesaj]"
-    /// Referință: Cerințele proiectului, punctul 6
+    /// Required format: "at line X, column Y: [type] error - [message]"
+    /// Reference: Project requirements, point 6
     /// </remarks>
-    public class EroareCompilare
+    public class CompilationError
     {
-        #region Proprietăți
+        #region Properties
 
         /// <summary>
-        /// Numărul liniei unde a apărut eroarea (indexare de la 1).
+        /// The line number where the error occurred (1-indexed).
         /// </summary>
-        public int Linie { get; }
+        public int Line { get; }
 
         /// <summary>
-        /// Numărul coloanei unde a apărut eroarea (indexare de la 1).
+        /// The column number where the error occurred (1-indexed).
         /// </summary>
-        public int Coloana { get; }
+        public int Column { get; }
 
         /// <summary>
-        /// Tipul erorii: lexicală, sintactică sau semantică.
+        /// The type of error: lexical, syntactic or semantic.
         /// </summary>
-        public TipEroare Tip { get; }
+        public ErrorType Type { get; }
 
         /// <summary>
-        /// Mesajul descriptiv al erorii.
+        /// The descriptive error message.
         /// </summary>
-        public string Mesaj { get; }
+        public string Message { get; }
 
         /// <summary>
-        /// Text sursă care a cauzat eroarea (opțional, pentru context).
+        /// Source text that caused the error (optional, for context).
         /// </summary>
-        public string TextSursa { get; }
+        public string SourceText { get; }
 
         #endregion
 
-        #region Constructori
+        #region Constructors
 
         /// <summary>
-        /// Inițializează o nouă instanță a clasei <see cref="EroareCompilare"/>.
+        /// Initializes a new instance of the <see cref="CompilationError"/> class.
         /// </summary>
-        /// <param name="linie">Numărul liniei (indexare de la 1)</param>
-        /// <param name="coloana">Numărul coloanei (indexare de la 1)</param>
-        /// <param name="tip">Tipul erorii</param>
-        /// <param name="mesaj">Mesajul descriptiv</param>
-        /// <param name="textSursa">Text sursă opțional pentru context</param>
+        /// <param name="line">Line number (1-indexed)</param>
+        /// <param name="column">Column number (1-indexed)</param>
+        /// <param name="type">Error type</param>
+        /// <param name="message">Descriptive message</param>
+        /// <param name="sourceText">Optional source text for context</param>
         /// <exception cref="ArgumentException">
-        /// Dacă linia sau coloana sunt mai mici decât 1, sau dacă mesajul este gol
+        /// If line or column are less than 1, or if message is empty
         /// </exception>
-        public EroareCompilare(int linie, int coloana, TipEroare tip, string mesaj, string textSursa = "")
+        public CompilationError(int line, int column, ErrorType type, string message, string sourceText = "")
         {
-            if (linie < 1)
-                throw new ArgumentException("Numărul liniei trebuie să fie mai mare sau egal cu 1", nameof(linie));
-            
-            if (coloana < 1)
-                throw new ArgumentException("Numărul coloanei trebuie să fie mai mare sau egal cu 1", nameof(coloana));
-            
-            if (string.IsNullOrWhiteSpace(mesaj))
-                throw new ArgumentException("Mesajul erorii nu poate fi gol", nameof(mesaj));
+            if (line < 1)
+                throw new ArgumentException("Line number must be greater than or equal to 1", nameof(line));
 
-            Linie = linie;
-            Coloana = coloana;
-            Tip = tip;
-            Mesaj = mesaj;
-            TextSursa = textSursa ?? string.Empty;
+            if (column < 1)
+                throw new ArgumentException("Column number must be greater than or equal to 1", nameof(column));
+
+            if (string.IsNullOrWhiteSpace(message))
+                throw new ArgumentException("Error message cannot be empty", nameof(message));
+
+            Line = line;
+            Column = column;
+            Type = type;
+            Message = message;
+            SourceText = sourceText ?? string.Empty;
         }
 
         #endregion
 
-        #region Metode publice
+        #region Public Methods
 
         /// <summary>
-        /// Returnează reprezentarea textuală a erorii în formatul obligatoriu.
+        /// Returns the textual representation of the error in the required format.
         /// </summary>
         /// <returns>
-        /// String în formatul: "la linia X, coloana Y: eroare [tip] - [mesaj]"
+        /// String in format: "at line X, column Y: [type] error - [message]"
         /// </returns>
         /// <example>
         /// <code>
-        /// var eroare = new EroareCompilare(5, 12, TipEroare.Semantica, "variabila 'x' nu a fost declarată");
-        /// Console.WriteLine(eroare.ToString());
-        /// // Output: la linia 5, coloana 12: eroare semantică - variabila 'x' nu a fost declarată
+        /// var error = new CompilationError(5, 12, ErrorType.Semantic, "variable 'x' was not declared");
+        /// Console.WriteLine(error.ToString());
+        /// // Output: at line 5, column 12: semantic error - variable 'x' was not declared
         /// </code>
         /// </example>
         public override string ToString()
         {
-            string tipStr = ObtineDenumireTip();
-            return $"la linia {Linie}, coloana {Coloana}: eroare {tipStr} - {Mesaj}";
+            string typeStr = GetTypeName();
+            return $"at line {Line}, column {Column}: {typeStr} error - {Message}";
         }
 
         /// <summary>
-        /// Returnează reprezentarea textuală cu context adițional (text sursă).
+        /// Returns the textual representation with additional context (source text).
         /// </summary>
-        /// <returns>String cu eroarea și textul sursă care a cauzat-o</returns>
-        public string ToStringCuContext()
+        /// <returns>String with error and source text that caused it</returns>
+        public string ToStringWithContext()
         {
-            string reprezentare = ToString();
-            
-            if (!string.IsNullOrWhiteSpace(TextSursa))
+            string representation = ToString();
+
+            if (!string.IsNullOrWhiteSpace(SourceText))
             {
-                reprezentare += Environment.NewLine;
-                reprezentare += $"  Context: {TextSursa}";
-                
-                // Adaugă indicator vizual pentru poziția exactă
-                if (Coloana <= TextSursa.Length)
+                representation += Environment.NewLine;
+                representation += $"  Context: {SourceText}";
+
+                // Add visual indicator for exact position
+                if (Column <= SourceText.Length)
                 {
-                    reprezentare += Environment.NewLine;
-                    reprezentare += "  " + new string(' ', Coloana - 1) + "^";
+                    representation += Environment.NewLine;
+                    representation += "  " + new string(' ', Column - 1) + "^";
                 }
             }
-            
-            return reprezentare;
+
+            return representation;
         }
 
         /// <summary>
-        /// Compară două erori pentru egalitate bazată pe linie, coloană și mesaj.
+        /// Compares two errors for equality based on line, column and message.
         /// </summary>
         public override bool Equals(object obj)
         {
-            if (obj is EroareCompilare alta)
+            if (obj is CompilationError other)
             {
-                return Linie == alta.Linie && 
-                       Coloana == alta.Coloana && 
-                       Tip == alta.Tip && 
-                       Mesaj == alta.Mesaj;
+                return Line == other.Line &&
+                       Column == other.Column &&
+                       Type == other.Type &&
+                       Message == other.Message;
             }
             return false;
         }
 
         /// <summary>
-        /// Returnează hash code pentru eroare.
+        /// Returns hash code for the error.
         /// </summary>
         public override int GetHashCode()
         {
-            return HashCode.Combine(Linie, Coloana, Tip, Mesaj);
+            return HashCode.Combine(Line, Column, Type, Message);
         }
 
         #endregion
 
-        #region Metode helper private
+        #region Private Helper Methods
 
         /// <summary>
-        /// Convertește tipul erorii în denumire pentru afișare.
+        /// Converts the error type to a display name.
         /// </summary>
-        /// <returns>Denumirea tipului în limba română</returns>
-        private string ObtineDenumireTip()
+        /// <returns>Type name in English</returns>
+        private string GetTypeName()
         {
-            return Tip switch
+            return Type switch
             {
-                TipEroare.Lexicala => "lexicală",
-                TipEroare.Sintactica => "sintactică",
-                TipEroare.Semantica => "semantică",
-                _ => "necunoscută"
+                ErrorType.Lexical => "lexical",
+                ErrorType.Syntactic => "syntactic",
+                ErrorType.Semantic => "semantic",
+                _ => "unknown"
             };
         }
 
         #endregion
 
-        #region Factory Methods (pentru ușurință)
+        #region Factory Methods (for convenience)
 
         /// <summary>
-        /// Creează o eroare lexicală.
+        /// Creates a lexical error.
         /// </summary>
-        public static EroareCompilare Lexicala(int linie, int coloana, string mesaj, string textSursa = "")
+        public static CompilationError Lexical(int line, int column, string message, string sourceText = "")
         {
-            return new EroareCompilare(linie, coloana, TipEroare.Lexicala, mesaj, textSursa);
+            return new CompilationError(line, column, ErrorType.Lexical, message, sourceText);
         }
 
         /// <summary>
-        /// Creează o eroare sintactică.
+        /// Creates a syntactic error.
         /// </summary>
-        public static EroareCompilare Sintactica(int linie, int coloana, string mesaj, string textSursa = "")
+        public static CompilationError Syntactic(int line, int column, string message, string sourceText = "")
         {
-            return new EroareCompilare(linie, coloana, TipEroare.Sintactica, mesaj, textSursa);
+            return new CompilationError(line, column, ErrorType.Syntactic, message, sourceText);
         }
 
         /// <summary>
-        /// Creează o eroare semantică.
+        /// Creates a semantic error.
         /// </summary>
-        public static EroareCompilare Semantica(int linie, int coloana, string mesaj, string textSursa = "")
+        public static CompilationError Semantic(int line, int column, string message, string sourceText = "")
         {
-            return new EroareCompilare(linie, coloana, TipEroare.Semantica, mesaj, textSursa);
+            return new CompilationError(line, column, ErrorType.Semantic, message, sourceText);
         }
 
         #endregion

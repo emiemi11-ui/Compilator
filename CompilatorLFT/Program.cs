@@ -2,406 +2,406 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CompilatorLFT.Core;
-using CompilatorLFT.Models.Instructiuni;
+using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
 
 namespace CompilatorLFT
 {
     /// <summary>
-    /// Program principal pentru Compilatorul LFT.
+    /// Main program for the LFT Compiler.
     /// </summary>
     class Program
     {
         static void Main(string[] args)
         {
-            AfiseazaHeader();
+            DisplayHeader();
 
-            // Verificare argumente linie comanda
+            // Check command line arguments
             if (args.Length > 0)
             {
-                // Rulare din fisier specificat ca argument
-                RuleazaDinFisier(args[0]);
+                // Run from file specified as argument
+                RunFromFile(args[0]);
                 return;
             }
 
-            // Meniu interactiv
+            // Interactive menu
             while (true)
             {
-                AfiseazaMeniu();
-                Console.Write("\nAlegere: ");
-                string alegere = Console.ReadLine()?.Trim();
+                DisplayMenu();
+                Console.Write("\nChoice: ");
+                string choice = Console.ReadLine()?.Trim();
 
-                switch (alegere)
+                switch (choice)
                 {
                     case "1":
-                        RuleazaDinFisierInteractiv();
+                        RunFromFileInteractive();
                         break;
 
                     case "2":
-                        RuleazaInteractiv();
+                        RunInteractive();
                         break;
 
                     case "3":
-                        RuleazaTesteAutomate();
+                        RunAutomatedTests();
                         break;
 
                     case "4":
-                        AfiseazaExemple();
+                        DisplayExamples();
                         break;
 
                     case "5":
                     case "q":
                     case "Q":
-                        Console.WriteLine("\nLa revedere!");
+                        Console.WriteLine("\nGoodbye!");
                         return;
 
                     default:
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine("Alegere invalida! Introduceti un numar intre 1-5.");
+                        Console.WriteLine("Invalid choice! Enter a number between 1-5.");
                         Console.ResetColor();
                         break;
                 }
 
-                Console.WriteLine("\nApasati ENTER pentru a continua...");
+                Console.WriteLine("\nPress ENTER to continue...");
                 Console.ReadLine();
                 Console.Clear();
             }
         }
 
-        #region Afisare UI
+        #region UI Display
 
-        static void AfiseazaHeader()
+        static void DisplayHeader()
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("╔══════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║          COMPILATOR LFT - PROIECT ACADEMIC               ║");
-            Console.WriteLine("║      Limbaje Formale si Translatoare - UAIC Iasi         ║");
+            Console.WriteLine("║            LFT COMPILER - ACADEMIC PROJECT               ║");
+            Console.WriteLine("║       Formal Languages and Translators - UAIC Iasi       ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════╝");
             Console.ResetColor();
             Console.WriteLine();
         }
 
-        static void AfiseazaMeniu()
+        static void DisplayMenu()
         {
             Console.WriteLine("╔══════════════════════════════════════╗");
-            Console.WriteLine("║           MENIU PRINCIPAL            ║");
+            Console.WriteLine("║            MAIN MENU                 ║");
             Console.WriteLine("╠══════════════════════════════════════╣");
-            Console.WriteLine("║  1. Citire din fisier                ║");
-            Console.WriteLine("║  2. Introducere manuala cod          ║");
-            Console.WriteLine("║  3. Rulare teste automate            ║");
-            Console.WriteLine("║  4. Afisare exemple                  ║");
-            Console.WriteLine("║  5. Iesire                           ║");
+            Console.WriteLine("║  1. Read from file                   ║");
+            Console.WriteLine("║  2. Manual code input                ║");
+            Console.WriteLine("║  3. Run automated tests              ║");
+            Console.WriteLine("║  4. Display examples                 ║");
+            Console.WriteLine("║  5. Exit                             ║");
             Console.WriteLine("╚══════════════════════════════════════╝");
         }
 
         #endregion
 
-        #region Moduri de Rulare
+        #region Run Modes
 
-        static void RuleazaDinFisierInteractiv()
+        static void RunFromFileInteractive()
         {
-            Console.Write("\nIntroduceti calea fisierului: ");
-            string cale = Console.ReadLine()?.Trim();
+            Console.Write("\nEnter file path: ");
+            string path = Console.ReadLine()?.Trim();
 
-            if (string.IsNullOrEmpty(cale))
+            if (string.IsNullOrEmpty(path))
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Calea nu poate fi goala!");
+                Console.WriteLine("Path cannot be empty!");
                 Console.ResetColor();
                 return;
             }
 
-            RuleazaDinFisier(cale);
+            RunFromFile(path);
         }
 
-        static void RuleazaDinFisier(string cale)
+        static void RunFromFile(string path)
         {
-            string continut = CititorFisier.CitesteFisier(cale);
+            string content = FileReader.ReadFile(path);
 
-            if (continut == null)
+            if (content == null)
                 return;
 
-            Console.WriteLine("\n=== COD SURSA ===");
-            CititorFisier.AfiseazaCuNumereLinii(continut);
+            Console.WriteLine("\n=== SOURCE CODE ===");
+            FileReader.DisplayWithLineNumbers(content);
 
-            CompileazaSiRuleaza(continut);
+            CompileAndRun(content);
         }
 
-        static void RuleazaInteractiv()
+        static void RunInteractive()
         {
-            Console.WriteLine("\nIntroduceti codul sursa (linie goala pentru a termina):");
-            Console.WriteLine("Exemplu: int a = 5; 3 + 4;");
+            Console.WriteLine("\nEnter source code (empty line to finish):");
+            Console.WriteLine("Example: int a = 5; 3 + 4;");
             Console.WriteLine();
 
-            var linii = new List<string>();
-            int numarLinie = 1;
+            var lines = new List<string>();
+            int lineNumber = 1;
 
             while (true)
             {
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write($"{numarLinie,3} | ");
+                Console.Write($"{lineNumber,3} | ");
                 Console.ResetColor();
 
-                string linie = Console.ReadLine();
+                string line = Console.ReadLine();
 
-                if (string.IsNullOrEmpty(linie))
+                if (string.IsNullOrEmpty(line))
                     break;
 
-                linii.Add(linie);
-                numarLinie++;
+                lines.Add(line);
+                lineNumber++;
             }
 
-            if (linii.Count == 0)
+            if (lines.Count == 0)
             {
-                Console.WriteLine("Nu s-a introdus niciun cod!");
+                Console.WriteLine("No code entered!");
                 return;
             }
 
-            string continut = string.Join("\n", linii);
-            CompileazaSiRuleaza(continut);
+            string content = string.Join("\n", lines);
+            CompileAndRun(content);
         }
 
         #endregion
 
-        #region Compilare si Executie
+        #region Compilation and Execution
 
-        static void CompileazaSiRuleaza(string continut)
+        static void CompileAndRun(string content)
         {
-            // FAZA 1: ANALIZA LEXICALA
+            // PHASE 1: LEXICAL ANALYSIS
             Console.WriteLine("\n" + new string('=', 50));
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("FAZA 1: ANALIZA LEXICALA");
+            Console.WriteLine("PHASE 1: LEXICAL ANALYSIS");
             Console.ResetColor();
             Console.WriteLine(new string('=', 50));
 
-            var lexer = new Lexer(continut);
-            var tokeni = lexer.Tokenizeaza();
+            var lexer = new Lexer(content);
+            var tokens = lexer.Tokenize();
 
-            Console.WriteLine($"Tokeni generati: {tokeni.Count}");
+            Console.WriteLine($"Generated tokens: {tokens.Count}");
 
-            if (lexer.Erori.Any())
+            if (lexer.Errors.Any())
             {
-                AfiseazaErori("ERORI LEXICALE", lexer.Erori);
+                DisplayErrors("LEXICAL ERRORS", lexer.Errors);
                 return;
             }
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("✓ Analiza lexicala reusita!");
+            Console.WriteLine("Lexical analysis successful!");
             Console.ResetColor();
 
-            // Afisare tokeni (optional)
-            Console.WriteLine("\nTokeni:");
-            foreach (var token in tokeni.Take(20))
+            // Display tokens (optional)
+            Console.WriteLine("\nTokens:");
+            foreach (var token in tokens.Take(20))
             {
                 Console.WriteLine($"  {token}");
             }
-            if (tokeni.Count > 20)
+            if (tokens.Count > 20)
             {
-                Console.WriteLine($"  ... si inca {tokeni.Count - 20} tokeni");
+                Console.WriteLine($"  ... and {tokens.Count - 20} more tokens");
             }
 
-            // FAZA 2: ANALIZA SINTACTICA SI SEMANTICA
+            // PHASE 2: SYNTACTIC AND SEMANTIC ANALYSIS
             Console.WriteLine("\n" + new string('=', 50));
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("FAZA 2: ANALIZA SINTACTICA & SEMANTICA");
+            Console.WriteLine("PHASE 2: SYNTACTIC & SEMANTIC ANALYSIS");
             Console.ResetColor();
             Console.WriteLine(new string('=', 50));
 
-            var parser = new Parser(continut);
-            var program = parser.ParseazaProgram();
+            var parser = new Parser(content);
+            var program = parser.ParseProgram();
 
-            Console.WriteLine($"Instructiuni parsate: {program.Instructiuni.Count}");
-            Console.WriteLine($"Variabile declarate: {parser.TabelSimboluri.NumarVariabile}");
+            Console.WriteLine($"Parsed statements: {program.Statements.Count}");
+            Console.WriteLine($"Declared variables: {parser.SymbolTable.VariableCount}");
 
-            if (parser.Erori.Any())
+            if (parser.Errors.Any())
             {
-                AfiseazaErori("ERORI SINTACTICE/SEMANTICE", parser.Erori);
+                DisplayErrors("SYNTACTIC/SEMANTIC ERRORS", parser.Errors);
                 return;
             }
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("✓ Analiza sintactica reusita!");
-            Console.WriteLine("✓ Analiza semantica reusita!");
+            Console.WriteLine("Syntactic analysis successful!");
+            Console.WriteLine("Semantic analysis successful!");
             Console.ResetColor();
 
-            // AFISARE ARBORE SINTACTIC
+            // DISPLAY SYNTAX TREE
             Console.WriteLine("\n" + new string('=', 50));
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("ARBORE SINTACTIC (AST)");
+            Console.WriteLine("SYNTAX TREE (AST)");
             Console.ResetColor();
             Console.WriteLine(new string('=', 50));
 
-            program.AfiseazaArbore();
+            program.DisplayTree();
 
-            // FAZA 3: EVALUARE SI EXECUTIE
+            // PHASE 3: EVALUATION AND EXECUTION
             Console.WriteLine("\n" + new string('=', 50));
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("FAZA 3: EVALUARE & EXECUTIE");
+            Console.WriteLine("PHASE 3: EVALUATION & EXECUTION");
             Console.ResetColor();
             Console.WriteLine(new string('=', 50));
 
-            var evaluator = new Evaluator(parser.TabelSimboluri);
-            evaluator.ExecutaProgram(program);
+            var evaluator = new Evaluator(parser.SymbolTable);
+            evaluator.ExecuteProgram(program);
 
-            if (evaluator.Erori.Any())
+            if (evaluator.Errors.Any())
             {
-                AfiseazaErori("ERORI RUNTIME", evaluator.Erori);
+                DisplayErrors("RUNTIME ERRORS", evaluator.Errors);
                 return;
             }
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("\n✓ Executie reusita!");
+            Console.WriteLine("\nExecution successful!");
             Console.ResetColor();
 
-            // TABEL SIMBOLURI FINAL
+            // FINAL SYMBOL TABLE
             Console.WriteLine("\n" + new string('=', 50));
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("TABEL SIMBOLURI (STARE FINALA)");
+            Console.WriteLine("SYMBOL TABLE (FINAL STATE)");
             Console.ResetColor();
             Console.WriteLine(new string('=', 50));
 
-            parser.TabelSimboluri.AfiseazaVariabile();
+            parser.SymbolTable.DisplayVariables();
         }
 
-        static void AfiseazaErori(string titlu, IEnumerable<EroareCompilare> erori)
+        static void DisplayErrors(string title, IEnumerable<CompilationError> errors)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"\n{titlu}:");
-            foreach (var eroare in erori)
+            Console.WriteLine($"\n{title}:");
+            foreach (var error in errors)
             {
-                Console.WriteLine($"  ✗ {eroare}");
+                Console.WriteLine($"  X {error}");
             }
             Console.ResetColor();
         }
 
         #endregion
 
-        #region Teste Automate
+        #region Automated Tests
 
-        static void RuleazaTesteAutomate()
+        static void RunAutomatedTests()
         {
             Console.WriteLine("\n" + new string('=', 60));
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("RULARE TESTE AUTOMATE");
+            Console.WriteLine("RUNNING AUTOMATED TESTS");
             Console.ResetColor();
             Console.WriteLine(new string('=', 60));
 
-            var teste = new List<(string nume, string cod, bool asteptaSaReuseasca)>
+            var tests = new List<(string name, string code, bool expectSuccess)>
             {
-                // Teste de baza
-                ("Declaratie simpla", "int a;", true),
-                ("Declaratie cu initializare", "int a = 5;", true),
-                ("Declaratii multiple", "int a, b=3, c;", true),
-                ("Expresie aritmetica", "3 + 5;", true),
-                ("Precedenta operatori", "3 + 4 * 5;", true),
-                ("Paranteze", "(3 + 4) * 5;", true),
-                ("Minus unar", "int a = -5;", true),
+                // Basic tests
+                ("Simple declaration", "int a;", true),
+                ("Declaration with initialization", "int a = 5;", true),
+                ("Multiple declarations", "int a, b=3, c;", true),
+                ("Arithmetic expression", "3 + 5;", true),
+                ("Operator precedence", "3 + 4 * 5;", true),
+                ("Parentheses", "(3 + 4) * 5;", true),
+                ("Unary minus", "int a = -5;", true),
                 ("Double literal", "double x = 3.14;", true),
                 ("String literal", "string s = \"hello\";", true),
-                ("Concatenare string", "string a = \"hello\"; string b = \" world\"; string c = a + b;", true),
+                ("String concatenation", "string a = \"hello\"; string b = \" world\"; string c = a + b;", true),
 
-                // Atribuiri si operatii
-                ("Atribuire si calcul", "int a = 5; int b = 3; int c = a + b;", true),
-                ("Operatori relationali", "int a = 5; int b = 3; a > b;", true),
+                // Assignments and operations
+                ("Assignment and calculation", "int a = 5; int b = 3; int c = a + b;", true),
+                ("Relational operators", "int a = 5; int b = 3; a > b;", true),
 
-                // Structuri de control
-                ("If simplu", "int a = 5; int b = 0; if (a > 3) { b = 10; }", true),
+                // Control structures
+                ("Simple if", "int a = 5; int b = 0; if (a > 3) { b = 10; }", true),
                 ("If-else", "int a = 2; int b = 0; if (a > 3) { b = 10; } else { b = 20; }", true),
                 ("While", "int i = 0; int sum = 0; while (i < 5) { sum = sum + i; i = i + 1; }", true),
                 ("For", "int sum = 0; for (int i = 0; i < 5; i = i + 1) { sum = sum + i; }", true),
 
-                // Teste de erori (trebuie sa esueze)
-                ("Eroare: variabila nedeclarata", "x = 5;", false),
-                ("Eroare: declaratie duplicata", "int a; int a;", false),
-                ("Eroare: plus unar", "int a = +5;", false),
+                // Error tests (should fail)
+                ("Error: undeclared variable", "x = 5;", false),
+                ("Error: duplicate declaration", "int a; int a;", false),
+                ("Error: unary plus", "int a = +5;", false),
             };
 
-            int reusute = 0;
-            int total = teste.Count;
+            int passed = 0;
+            int total = tests.Count;
 
-            foreach (var (nume, cod, asteptaSaReuseasca) in teste)
+            foreach (var (name, code, expectSuccess) in tests)
             {
-                bool reusit = RuleazaTest(nume, cod, asteptaSaReuseasca);
-                if (reusit)
-                    reusute++;
+                bool success = RunTest(name, code, expectSuccess);
+                if (success)
+                    passed++;
             }
 
-            // Raport final
+            // Final report
             Console.WriteLine("\n" + new string('=', 60));
-            double procent = (double)reusute / total * 100;
+            double percent = (double)passed / total * 100;
 
-            if (reusute == total)
+            if (passed == total)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"✓ TOATE TESTELE AU TRECUT! ({reusute}/{total} - {procent:F0}%)");
+                Console.WriteLine($"ALL TESTS PASSED! ({passed}/{total} - {percent:F0}%)");
             }
             else
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Teste reusute: {reusute}/{total} ({procent:F0}%)");
+                Console.WriteLine($"Tests passed: {passed}/{total} ({percent:F0}%)");
             }
             Console.ResetColor();
         }
 
-        static bool RuleazaTest(string nume, string cod, bool asteptaSaReuseasca)
+        static bool RunTest(string name, string code, bool expectSuccess)
         {
             try
             {
-                var parser = new Parser(cod);
-                var program = parser.ParseazaProgram();
+                var parser = new Parser(code);
+                var program = parser.ParseProgram();
 
-                bool areEroriParsare = parser.Erori.Any();
+                bool hasParseErrors = parser.Errors.Any();
 
-                if (!areEroriParsare)
+                if (!hasParseErrors)
                 {
-                    var evaluator = new Evaluator(parser.TabelSimboluri);
-                    evaluator.ExecutaProgram(program);
+                    var evaluator = new Evaluator(parser.SymbolTable);
+                    evaluator.ExecuteProgram(program);
 
-                    bool areEroriEvaluare = evaluator.Erori.Any();
+                    bool hasEvalErrors = evaluator.Errors.Any();
 
-                    if (asteptaSaReuseasca && !areEroriEvaluare)
+                    if (expectSuccess && !hasEvalErrors)
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"✓ {nume}");
+                        Console.WriteLine($"  PASS: {name}");
                         Console.ResetColor();
                         return true;
                     }
-                    else if (!asteptaSaReuseasca && areEroriEvaluare)
+                    else if (!expectSuccess && hasEvalErrors)
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"✓ {nume} (eroare detectata corect)");
+                        Console.WriteLine($"  PASS: {name} (error detected correctly)");
                         Console.ResetColor();
                         return true;
                     }
                 }
                 else
                 {
-                    if (!asteptaSaReuseasca)
+                    if (!expectSuccess)
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"✓ {nume} (eroare detectata corect)");
+                        Console.WriteLine($"  PASS: {name} (error detected correctly)");
                         Console.ResetColor();
                         return true;
                     }
                 }
 
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"✗ {nume}");
+                Console.WriteLine($"  FAIL: {name}");
                 Console.ResetColor();
                 return false;
             }
             catch (Exception ex)
             {
-                if (!asteptaSaReuseasca)
+                if (!expectSuccess)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"✓ {nume} (eroare detectata: {ex.Message})");
+                    Console.WriteLine($"  PASS: {name} (error detected: {ex.Message})");
                     Console.ResetColor();
                     return true;
                 }
 
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"✗ {nume} - Exceptie: {ex.Message}");
+                Console.WriteLine($"  FAIL: {name} - Exception: {ex.Message}");
                 Console.ResetColor();
                 return false;
             }
@@ -409,55 +409,55 @@ namespace CompilatorLFT
 
         #endregion
 
-        #region Exemple
+        #region Examples
 
-        static void AfiseazaExemple()
+        static void DisplayExamples()
         {
             Console.WriteLine("\n" + new string('=', 60));
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("EXEMPLE DE COD SURSA");
+            Console.WriteLine("SOURCE CODE EXAMPLES");
             Console.ResetColor();
             Console.WriteLine(new string('=', 60));
 
-            var exemple = new[]
+            var examples = new[]
             {
-                ("Declaratii si expresii", @"
+                ("Declarations and expressions", @"
 int a = 5;
 int b = 3;
-int suma = a + b;
-suma * 2;
+int sum = a + b;
+sum * 2;
 "),
-                ("Structuri de control", @"
+                ("Control structures", @"
 int sum = 0;
 for (int i = 1; i <= 10; i = i + 1) {
     sum = sum + i;
 }
 sum;
 "),
-                ("Conditionale", @"
+                ("Conditionals", @"
 int x = 7;
-int rezultat;
+int result;
 if (x > 5) {
-    rezultat = 100;
+    result = 100;
 } else {
-    rezultat = 0;
+    result = 0;
 }
-rezultat;
+result;
 "),
-                ("String-uri", @"
-string salut = ""Hello"";
-string nume = "" World"";
-string mesaj = salut + nume;
-mesaj;
+                ("Strings", @"
+string greeting = ""Hello"";
+string name = "" World"";
+string message = greeting + name;
+message;
 ")
             };
 
-            foreach (var (titlu, cod) in exemple)
+            foreach (var (title, code) in examples)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"\n--- {titlu} ---");
+                Console.WriteLine($"\n--- {title} ---");
                 Console.ResetColor();
-                Console.WriteLine(cod.Trim());
+                Console.WriteLine(code.Trim());
             }
         }
 

@@ -5,196 +5,196 @@ using CompilatorLFT.Models;
 namespace CompilatorLFT.Models
 {
     /// <summary>
-    /// Clasa abstractă de bază pentru toate nodurile din arborele sintactic abstract (AST).
+    /// Abstract base class for all nodes in the abstract syntax tree (AST).
     /// </summary>
     /// <remarks>
-    /// Referință: Dragon Book, Cap. 5 - "Syntax-Directed Translation"
-    /// 
-    /// Arborele sintactic abstract (AST) este o reprezentare ierarhică a programului
-    /// în care:
-    /// - Nodurile interne reprezintă operatori sau constructe de limbaj
-    /// - Frunzele reprezintă operanzi (literali, variabile)
-    /// 
-    /// Această clasă folosește Composite Pattern pentru a permite tratarea uniformă
-    /// a nodurilor simple (frunze) și nodurilor compuse (cu copii).
+    /// Reference: Dragon Book, Ch. 5 - "Syntax-Directed Translation"
+    ///
+    /// The abstract syntax tree (AST) is a hierarchical representation of the program
+    /// where:
+    /// - Internal nodes represent operators or language constructs
+    /// - Leaves represent operands (literals, variables)
+    ///
+    /// This class uses the Composite Pattern to allow uniform treatment
+    /// of simple nodes (leaves) and composite nodes (with children).
     /// </remarks>
-    public abstract class NodSintactic
+    public abstract class SyntaxNode
     {
-        #region Proprietăți abstracte
+        #region Abstract Properties
 
         /// <summary>
-        /// Tipul nodului sintactic.
+        /// The type of the syntax node.
         /// </summary>
-        public abstract TipAtomLexical Tip { get; }
+        public abstract TokenType Type { get; }
 
         #endregion
 
-        #region Metode abstracte
+        #region Abstract Methods
 
         /// <summary>
-        /// Obține toți copiii directi ai acestui nod.
+        /// Gets all direct children of this node.
         /// </summary>
         /// <returns>
-        /// Enumerare de copii. Pentru frunze (ex: AtomLexical) returnează colecție goală.
+        /// Enumeration of children. For leaves (e.g.: Token) returns empty collection.
         /// </returns>
         /// <remarks>
-        /// Această metodă permite traversarea arborelui sintactic folosind
-        /// pattern-ul Visitor sau Iterator.
+        /// This method allows traversal of the syntax tree using
+        /// the Visitor or Iterator pattern.
         /// </remarks>
-        public abstract IEnumerable<NodSintactic> ObtineCopii();
+        public abstract IEnumerable<SyntaxNode> GetChildren();
 
         #endregion
 
-        #region Metode pentru afișare arbore
+        #region Tree Display Methods
 
         /// <summary>
-        /// Afișează arborele sintactic în format ierarhic la consolă.
+        /// Displays the syntax tree in hierarchical format to console.
         /// </summary>
-        /// <param name="indentare">Nivel de indentare curent (pentru recursie)</param>
-        /// <param name="estUltim">Indică dacă acest nod este ultimul copil al părintelui</param>
+        /// <param name="indent">Current indentation level (for recursion)</param>
+        /// <param name="isLast">Indicates if this node is the last child of the parent</param>
         /// <remarks>
-        /// Format afișare:
+        /// Display format:
         /// <code>
-        /// └──ExpresieBinara
-        ///     ├──ExpresieNumerica
-        ///     │   └──NumarIntreg 5
+        /// └──BinaryExpression
+        ///     ├──NumericExpression
+        ///     │   └──IntegerNumber 5
         ///     ├──Plus +
-        ///     └──ExpresieNumerica
-        ///         └──NumarIntreg 3
+        ///     └──NumericExpression
+        ///         └──IntegerNumber 3
         /// </code>
         /// </remarks>
-        public virtual void AfiseazaArbore(string indentare = "", bool estUltim = true)
+        public virtual void DisplayTree(string indent = "", bool isLast = true)
         {
-            // Prefix pentru linia curentă
-            string prefix = estUltim ? "└──" : "├──";
-            
-            // Afișează tipul nodului
-            Console.Write(indentare);
+            // Prefix for current line
+            string prefix = isLast ? "└──" : "├──";
+
+            // Display node type
+            Console.Write(indent);
             Console.Write(prefix);
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write(Tip);
+            Console.Write(Type);
             Console.ResetColor();
 
-            // Pentru atomi lexicali cu valoare, afișează și valoarea
-            if (this is AtomLexical atom && atom.Valoare != null)
+            // For lexical tokens with value, display the value too
+            if (this is Token token && token.Value != null)
             {
                 Console.Write(" ");
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                
-                // Formatare specială pentru string-uri
-                if (atom.Valoare is string str)
+
+                // Special formatting for strings
+                if (token.Value is string str)
                 {
                     Console.Write($"\"{str}\"");
                 }
                 else
                 {
-                    Console.Write(atom.Valoare);
+                    Console.Write(token.Value);
                 }
-                
+
                 Console.ResetColor();
             }
 
             Console.WriteLine();
 
-            // Actualizează indentarea pentru copii
-            string indentareNoua = indentare + (estUltim ? "    " : "│   ");
+            // Update indentation for children
+            string newIndent = indent + (isLast ? "    " : "│   ");
 
-            // Obține copiii
-            var copii = ObtineCopii();
-            var listaCopii = new List<NodSintactic>(copii);
-            
-            // Afișează recursiv fiecare copil
-            for (int i = 0; i < listaCopii.Count; i++)
+            // Get children
+            var children = GetChildren();
+            var childList = new List<SyntaxNode>(children);
+
+            // Display each child recursively
+            for (int i = 0; i < childList.Count; i++)
             {
-                bool estUltimulCopil = (i == listaCopii.Count - 1);
-                listaCopii[i].AfiseazaArbore(indentareNoua, estUltimulCopil);
+                bool isLastChild = (i == childList.Count - 1);
+                childList[i].DisplayTree(newIndent, isLastChild);
             }
         }
 
         /// <summary>
-        /// Numără numărul total de noduri din arborele cu rădăcina în acest nod.
+        /// Counts the total number of nodes in the tree rooted at this node.
         /// </summary>
-        /// <returns>Numărul de noduri (inclusiv nodul curent)</returns>
-        public int NumaraNoduri()
+        /// <returns>Number of nodes (including this node)</returns>
+        public int CountNodes()
         {
-            int count = 1; // Acest nod
-            
-            foreach (var copil in ObtineCopii())
+            int count = 1; // This node
+
+            foreach (var child in GetChildren())
             {
-                count += copil.NumaraNoduri();
+                count += child.CountNodes();
             }
-            
+
             return count;
         }
 
         /// <summary>
-        /// Calculează înălțimea arborelui cu rădăcina în acest nod.
+        /// Calculates the height of the tree rooted at this node.
         /// </summary>
-        /// <returns>Înălțimea (0 pentru frunze)</returns>
-        public int CalculeazaInaltime()
+        /// <returns>Height (0 for leaves)</returns>
+        public int CalculateHeight()
         {
-            var copii = ObtineCopii();
-            if (!copii.GetEnumerator().MoveNext())
-                return 0; // Frunză
-            
-            int inaltimeMaxima = 0;
-            foreach (var copil in copii)
+            var children = GetChildren();
+            if (!children.GetEnumerator().MoveNext())
+                return 0; // Leaf
+
+            int maxHeight = 0;
+            foreach (var child in children)
             {
-                int inaltimeCopil = copil.CalculeazaInaltime();
-                if (inaltimeCopil > inaltimeMaxima)
-                    inaltimeMaxima = inaltimeCopil;
+                int childHeight = child.CalculateHeight();
+                if (childHeight > maxHeight)
+                    maxHeight = childHeight;
             }
-            
-            return inaltimeMaxima + 1;
+
+            return maxHeight + 1;
         }
 
         /// <summary>
-        /// Creează o reprezentare text (S-expression style) a arborelui.
+        /// Creates a text representation (S-expression style) of the tree.
         /// </summary>
-        /// <returns>String reprezentând arborele</returns>
+        /// <returns>String representing the tree</returns>
         /// <example>
-        /// Pentru "3 + 5":
-        /// (ExpresieBinara (Numar 3) + (Numar 5))
+        /// For "3 + 5":
+        /// (BinaryExpression (Number 3) + (Number 5))
         /// </example>
         public string ToSExpression()
         {
-            var copii = ObtineCopii();
-            var listaCopii = new List<NodSintactic>(copii);
-            
-            if (listaCopii.Count == 0)
+            var children = GetChildren();
+            var childList = new List<SyntaxNode>(children);
+
+            if (childList.Count == 0)
             {
-                // Frunză
-                if (this is AtomLexical atom && atom.Valoare != null)
+                // Leaf
+                if (this is Token token && token.Value != null)
                 {
-                    if (atom.Valoare is string str)
-                        return $"({atom.Tip} \"{str}\")";
+                    if (token.Value is string str)
+                        return $"({token.Type} \"{str}\")";
                     else
-                        return $"({atom.Tip} {atom.Valoare})";
+                        return $"({token.Type} {token.Value})";
                 }
-                return $"({Tip})";
+                return $"({Type})";
             }
-            
-            // Nod intern
-            string rezultat = $"({Tip}";
-            foreach (var copil in listaCopii)
+
+            // Internal node
+            string result = $"({Type}";
+            foreach (var child in childList)
             {
-                rezultat += " " + copil.ToSExpression();
+                result += " " + child.ToSExpression();
             }
-            rezultat += ")";
-            
-            return rezultat;
+            result += ")";
+
+            return result;
         }
 
         #endregion
 
-        #region Metode pentru debugging
+        #region Debugging Methods
 
         /// <summary>
-        /// Returnează reprezentare text simplă pentru debugging.
+        /// Returns simple text representation for debugging.
         /// </summary>
         public override string ToString()
         {
-            return $"{Tip} [{NumaraNoduri()} noduri, h={CalculeazaInaltime()}]";
+            return $"{Type} [{CountNodes()} nodes, h={CalculateHeight()}]";
         }
 
         #endregion
