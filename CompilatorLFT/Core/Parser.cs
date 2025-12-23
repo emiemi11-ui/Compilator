@@ -669,7 +669,7 @@ namespace CompilatorLFT.Core
 
             var semicolon = ExpectType(TokenType.Semicolon);
 
-            return new DeclarationStatement(typeKeyword, declarations, semicolon);
+            return new DeclarationStatement(typeKeyword, declarations, semicolon, isArrayType);
         }
 
         /// <summary>

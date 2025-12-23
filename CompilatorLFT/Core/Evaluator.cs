@@ -282,6 +282,12 @@ namespace CompilatorLFT.Core
         {
             var dataType = GetDataType(decl.TypeKeyword.Type);
 
+            // Override for array types (e.g., int[] arr = [1, 2, 3])
+            if (decl.IsArrayType)
+            {
+                dataType = DataType.Array;
+            }
+
             foreach (var (id, initExpr) in decl.Declarations)
             {
                 // Declare variable in current scope
