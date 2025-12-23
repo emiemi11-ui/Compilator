@@ -2,268 +2,133 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CompilatorLFT.Core;
+using CompilatorLFT.Core.VM;
 using CompilatorLFT.Models;
 using CompilatorLFT.Models.Statements;
 using CompilatorLFT.Utils;
-using ProgramNode = CompilatorLFT.Models.Statements.Program;
 
 namespace CompilatorLFT
 {
     /// <summary>
-    /// Main program with beautiful interactive UI
+    /// Main program for the LFT Compiler.
     /// </summary>
     class Program
     {
         static void Main(string[] args)
         {
-            // Check for file argument
+            DisplayHeader();
+
+            // Check command line arguments
             if (args.Length > 0)
             {
+                // Run from file specified as argument
                 RunFromFile(args[0]);
                 return;
             }
 
-            // Interactive mode
+            // Interactive menu
             while (true)
             {
-                DisplayHeader();
-                DisplayMainMenu();
-
-                Console.Write("\n➤ Alege opțiunea: ");
+                DisplayMenu();
+                Console.Write("\nChoice: ");
                 string choice = Console.ReadLine()?.Trim();
-
-                Console.Clear();
 
                 switch (choice)
                 {
                     case "1":
-                        RunInteractiveConsole();
-                        break;
-
-                    case "2":
                         RunFromFileInteractive();
                         break;
 
+                    case "2":
+                        RunInteractive();
+                        break;
+
                     case "3":
-                        RunREPL();
-                        break;
-
-                    case "4":
-                        RunWithOptimization();
-                        break;
-
-                    case "5":
-                        RunWithStaticAnalysis();
-                        break;
-
-                    case "6":
                         RunAutomatedTests();
                         break;
 
+                    case "4":
+                        DisplayExamples();
+                        break;
+
+                    case "5":
+                        RunREPL();
+                        break;
+
+                    case "6":
+                        RunBytecodeMode();
+                        break;
+
                     case "7":
-                        ShowExamples();
+                        RunAdvancedAnalysis();
                         break;
 
                     case "8":
-                        ShowAbout();
-                        break;
-
-                    case "9":
-                    case "0":
-                    case "exit":
                     case "q":
-                        ExitProgram();
+                    case "Q":
+                        Console.WriteLine("\nGoodbye!");
                         return;
 
                     default:
-                        ShowError("Opțiune invalidă! Alege un număr între 1-9.");
-                        WaitForKey();
-                        Console.Clear();
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("Invalid choice! Enter a number between 1-8.");
+                        Console.ResetColor();
                         break;
                 }
+
+                Console.WriteLine("\nPress ENTER to continue...");
+                Console.ReadLine();
+                Console.Clear();
             }
         }
 
-        #region UI Display Methods
+        #region UI Display
 
         static void DisplayHeader()
         {
-            Console.Clear();
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║          🚀 COMPILATOR LFT - INTERACTIVE EDITION 🚀          ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("║         Limbaje Formale și Translatoare - UAIC Iași          ║");
-            Console.WriteLine("║                                                               ║");
-            Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
+            Console.WriteLine("╔══════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║            LFT COMPILER - ACADEMIC PROJECT               ║");
+            Console.WriteLine("║       Formal Languages and Translators - UAIC Iasi       ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════╝");
             Console.ResetColor();
             Console.WriteLine();
         }
 
-        static void DisplayMainMenu()
+        static void DisplayMenu()
         {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║                        MENIU PRINCIPAL                        ║");
-            Console.WriteLine("╠═══════════════════════════════════════════════════════════════╣");
-            Console.ResetColor();
-
-            PrintMenuOption("1", "💻 Mod Interactiv (Linie cu linie)", ConsoleColor.Green);
-            PrintMenuOption("2", "📁 Citire din Fișier", ConsoleColor.Green);
-            PrintMenuOption("3", "⚡ REPL Mode (Comenzi rapide)", ConsoleColor.Yellow);
-            PrintMenuOption("4", "🔧 Execuție cu Optimizări", ConsoleColor.Magenta);
-            PrintMenuOption("5", "🔍 Analiză Statică Avansată", ConsoleColor.Magenta);
-            PrintMenuOption("6", "🧪 Teste Automatizate", ConsoleColor.Blue);
-            PrintMenuOption("7", "📖 Exemple de Cod", ConsoleColor.Cyan);
-            PrintMenuOption("8", "ℹ️  Despre Compilator", ConsoleColor.Gray);
-            PrintMenuOption("9", "🚪 Ieșire", ConsoleColor.Red);
-
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
-            Console.ResetColor();
-        }
-
-        static void PrintMenuOption(string number, string text, ConsoleColor color)
-        {
-            Console.Write("║  ");
-            Console.ForegroundColor = color;
-            Console.Write($"[{number}]");
-            Console.ResetColor();
-            Console.Write(" ");
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write(text);
-
-            // Padding for alignment
-            int padding = 56 - text.Length;
-            if (padding < 0) padding = 0;
-            Console.Write(new string(' ', padding));
-            Console.WriteLine("║");
-            Console.ResetColor();
-        }
-
-        static void ShowSectionHeader(string title, string icon = "⚙️")
-        {
-            Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"╔═══════════════════════════════════════════════════════════════╗");
-            string content = $"  {icon}  {title}";
-            int pad = 64 - content.Length;
-            if (pad < 0) pad = 0;
-            Console.WriteLine($"║{content}{new string(' ', pad)}║");
-            Console.WriteLine($"╚═══════════════════════════════════════════════════════════════╝");
-            Console.ResetColor();
-            Console.WriteLine();
-        }
-
-        static void ShowSuccess(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ {message}");
-            Console.ResetColor();
-        }
-
-        static void ShowError(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"✗ {message}");
-            Console.ResetColor();
-        }
-
-        static void ShowWarning(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"⚠ {message}");
-            Console.ResetColor();
-        }
-
-        static void ShowInfo(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"ℹ {message}");
-            Console.ResetColor();
-        }
-
-        static void WaitForKey()
-        {
-            Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.Write("Apasă orice tastă pentru a continua...");
-            Console.ResetColor();
-            Console.ReadKey(true);
+            Console.WriteLine("╔══════════════════════════════════════════╗");
+            Console.WriteLine("║              MAIN MENU                   ║");
+            Console.WriteLine("╠══════════════════════════════════════════╣");
+            Console.WriteLine("║  1. Read from file                       ║");
+            Console.WriteLine("║  2. Manual code input                    ║");
+            Console.WriteLine("║  3. Run automated tests                  ║");
+            Console.WriteLine("║  4. Display examples                     ║");
+            Console.WriteLine("║  5. Interactive REPL                     ║");
+            Console.WriteLine("║  6. Bytecode mode (VM)                   ║");
+            Console.WriteLine("║  7. Advanced analysis                    ║");
+            Console.WriteLine("║  8. Exit                                 ║");
+            Console.WriteLine("╚══════════════════════════════════════════╝");
         }
 
         #endregion
 
-        #region Mode 1: Interactive Console
-
-        static void RunInteractiveConsole()
-        {
-            ShowSectionHeader("MOD INTERACTIV - Introducere Linie cu Linie", "💻");
-
-            ShowInfo("Introdu cod LFT linie cu linie. Scrie o linie goală pentru a executa.");
-            Console.WriteLine();
-            ShowInfo("Exemplu:");
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("  1 | int a = 5;");
-            Console.WriteLine("  2 | int b = 10;");
-            Console.WriteLine("  3 | print(a + b);");
-            Console.WriteLine("  4 | <enter gol>");
-            Console.ResetColor();
-            Console.WriteLine();
-
-            var lines = new List<string>();
-            int lineNumber = 1;
-
-            while (true)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write($"{lineNumber,3} | ");
-                Console.ResetColor();
-
-                string line = Console.ReadLine();
-
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    if (lines.Count == 0)
-                    {
-                        ShowWarning("Nu ai introdus niciun cod!");
-                        WaitForKey();
-                        return;
-                    }
-                    break;
-                }
-
-                lines.Add(line);
-                lineNumber++;
-            }
-
-            string code = string.Join("\n", lines);
-            Console.WriteLine();
-            CompileAndExecute(code);
-            WaitForKey();
-        }
-
-        #endregion
-
-        #region Mode 2: File Input
+        #region Run Modes
 
         static void RunFromFileInteractive()
         {
-            ShowSectionHeader("CITIRE DIN FIȘIER", "📁");
-
-            Console.Write("➤ Introdu calea către fișier: ");
+            Console.Write("\nEnter file path: ");
             string path = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrEmpty(path))
             {
-                ShowError("Calea nu poate fi goală!");
-                WaitForKey();
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Path cannot be empty!");
+                Console.ResetColor();
                 return;
             }
 
             RunFromFile(path);
-            WaitForKey();
         }
 
         static void RunFromFile(string path)
@@ -271,697 +136,689 @@ namespace CompilatorLFT
             string content = FileReader.ReadFile(path);
 
             if (content == null)
-            {
-                ShowError($"Nu s-a putut citi fișierul: {path}");
                 return;
-            }
 
-            ShowSuccess($"Fișier încărcat: {path}");
-            Console.WriteLine();
-
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("═══════════════════════════════════════════════════════════════");
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("COD SURSĂ:");
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("═══════════════════════════════════════════════════════════════");
-            Console.ResetColor();
-
+            Console.WriteLine("\n=== SOURCE CODE ===");
             FileReader.DisplayWithLineNumbers(content);
-            Console.WriteLine();
 
-            CompileAndExecute(content);
+            CompileAndRun(content);
         }
 
-        #endregion
-
-        #region Mode 3: REPL Mode
-
-        static void RunREPL()
+        static void RunInteractive()
         {
-            ShowSectionHeader("REPL MODE - Read-Eval-Print Loop", "⚡");
-
-            var repl = new REPL();
-
-            ShowInfo("Mod REPL activat! Comenzi disponibile:");
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("  :help     - Afișează ajutor");
-            Console.WriteLine("  :vars     - Afișează variabile");
-            Console.WriteLine("  :clear    - Șterge ecranul");
-            Console.WriteLine("  :exit     - Ieșire REPL");
-            Console.ResetColor();
+            Console.WriteLine("\nEnter source code (empty line to finish):");
+            Console.WriteLine("Example: int a = 5; 3 + 4;");
             Console.WriteLine();
 
-            repl.Start();
+            var lines = new List<string>();
+            int lineNumber = 1;
 
-            WaitForKey();
-        }
-
-        #endregion
-
-        #region Mode 4: Optimization Mode
-
-        static void RunWithOptimization()
-        {
-            ShowSectionHeader("EXECUȚIE CU OPTIMIZĂRI", "🔧");
-
-            Console.Write("➤ Alege sursa:\n");
-            Console.WriteLine("  [1] Introdu cod manual");
-            Console.WriteLine("  [2] Citește din fișier");
-            Console.Write("\n➤ Opțiune: ");
-
-            string choice = Console.ReadLine()?.Trim();
-            string code = null;
-
-            if (choice == "1")
+            while (true)
             {
-                Console.WriteLine("\n➤ Introdu codul (linie goală pentru final):\n");
-                var lines = new List<string>();
-                int lineNumber = 1;
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"{lineNumber,3} | ");
+                Console.ResetColor();
 
-                while (true)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write($"{lineNumber,3} | ");
-                    Console.ResetColor();
+                string line = Console.ReadLine();
 
-                    string line = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(line)) break;
+                if (string.IsNullOrEmpty(line))
+                    break;
 
-                    lines.Add(line);
-                    lineNumber++;
-                }
-
-                code = string.Join("\n", lines);
-            }
-            else if (choice == "2")
-            {
-                Console.Write("\n➤ Cale fișier: ");
-                string path = Console.ReadLine()?.Trim();
-                code = FileReader.ReadFile(path);
+                lines.Add(line);
+                lineNumber++;
             }
 
-            if (string.IsNullOrEmpty(code))
+            if (lines.Count == 0)
             {
-                ShowError("Cod invalid sau lipsă!");
-                WaitForKey();
+                Console.WriteLine("No code entered!");
                 return;
             }
 
-            Console.WriteLine();
-            ExecuteWithOptimization(code);
-            WaitForKey();
-        }
-
-        static void ExecuteWithOptimization(string code)
-        {
-            try
-            {
-                // Phase 1: Parsing
-                ShowInfo("Faza 1: Analiză Lexicală și Sintactică...");
-                var lexer = new Lexer(code);
-                var tokens = lexer.Tokenize();
-
-                if (lexer.Errors.Any())
-                {
-                    ShowError("Erori lexicale detectate:");
-                    DisplayErrors(lexer.Errors);
-                    return;
-                }
-
-                var parser = new Parser(code);
-                var program = parser.ParseProgram();
-
-                if (parser.Errors.Any())
-                {
-                    ShowError("Erori sintactice/semantice detectate:");
-                    DisplayErrors(parser.Errors);
-                    return;
-                }
-
-                ShowSuccess("Parsing complet!");
-                Console.WriteLine();
-
-                // Phase 2: Display Original AST
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.WriteLine("ARBORE SINTACTIC ORIGINAL:");
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.ResetColor();
-                DisplayPrettyTree(program);
-                Console.WriteLine();
-
-                // Phase 3: Optimization
-                ShowInfo("Faza 2: Aplicare Optimizări...");
-                var optimizer = new CodeOptimizer();
-                var optimizedProgram = optimizer.Optimize(program);
-
-                Console.WriteLine();
-                ShowSuccess("Optimizări aplicate!");
-                optimizer.DisplayStatistics();
-                Console.WriteLine();
-
-                // Phase 4: Display Optimized AST
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.WriteLine("ARBORE SINTACTIC OPTIMIZAT:");
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.ResetColor();
-                DisplayPrettyTree(optimizedProgram);
-                Console.WriteLine();
-
-                // Phase 5: Execution
-                ShowInfo("Faza 3: Execuție Cod Optimizat...");
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.WriteLine("OUTPUT:");
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.ResetColor();
-
-                var evaluator = new Evaluator();
-                evaluator.ExecuteProgram(optimizedProgram);
-
-                Console.WriteLine();
-                ShowSuccess("Execuție finalizată!");
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Eroare: {ex.Message}");
-            }
-        }
-
-        #endregion
-
-        #region Mode 5: Static Analysis
-
-        static void RunWithStaticAnalysis()
-        {
-            ShowSectionHeader("ANALIZĂ STATICĂ AVANSATĂ", "🔍");
-
-            Console.Write("➤ Alege sursa:\n");
-            Console.WriteLine("  [1] Introdu cod manual");
-            Console.WriteLine("  [2] Citește din fișier");
-            Console.Write("\n➤ Opțiune: ");
-
-            string choice = Console.ReadLine()?.Trim();
-            string code = null;
-
-            if (choice == "1")
-            {
-                Console.WriteLine("\n➤ Introdu codul (linie goală pentru final):\n");
-                var lines = new List<string>();
-                int lineNumber = 1;
-
-                while (true)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write($"{lineNumber,3} | ");
-                    Console.ResetColor();
-
-                    string line = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(line)) break;
-
-                    lines.Add(line);
-                    lineNumber++;
-                }
-
-                code = string.Join("\n", lines);
-            }
-            else if (choice == "2")
-            {
-                Console.Write("\n➤ Cale fișier: ");
-                string path = Console.ReadLine()?.Trim();
-                code = FileReader.ReadFile(path);
-            }
-
-            if (string.IsNullOrEmpty(code))
-            {
-                ShowError("Cod invalid sau lipsă!");
-                WaitForKey();
-                return;
-            }
-
-            Console.WriteLine();
-            PerformStaticAnalysis(code);
-            WaitForKey();
-        }
-
-        static void PerformStaticAnalysis(string code)
-        {
-            try
-            {
-                // Phase 1: Parsing
-                ShowInfo("Faza 1: Parsing...");
-                var parser = new Parser(code);
-                var program = parser.ParseProgram();
-
-                if (parser.Errors.Any())
-                {
-                    ShowError("Erori de parsing:");
-                    DisplayErrors(parser.Errors);
-                    return;
-                }
-
-                ShowSuccess("Parsing complet!");
-                Console.WriteLine();
-
-                // Phase 2: Static Analysis
-                ShowInfo("Faza 2: Analiză Statică...");
-                Console.WriteLine();
-
-                var analyzer = new StaticAnalyzer(parser.SymbolTable);
-                analyzer.Analyze(program);
-
-                // Display results
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.WriteLine("REZULTATE ANALIZĂ STATICĂ:");
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.ResetColor();
-                Console.WriteLine();
-
-                analyzer.DisplayWarnings();
-
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.WriteLine("SUMAR:");
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.ResetColor();
-                Console.WriteLine(analyzer.GetSummary());
-
-                if (analyzer.Warnings.Count == 0)
-                {
-                    ShowSuccess("Niciun warning detectat! Cod clean! ✨");
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Eroare: {ex.Message}");
-            }
-        }
-
-        #endregion
-
-        #region Mode 6: Automated Tests
-
-        static void RunAutomatedTests()
-        {
-            ShowSectionHeader("TESTE AUTOMATIZATE", "🧪");
-
-            ShowInfo("Rulare suite de teste...");
-            Console.WriteLine();
-
-            try
-            {
-                Tests.TestSuite.RunAllTests();
-
-                Console.WriteLine();
-                ShowSuccess("Toate testele au fost executate!");
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Eroare la rularea testelor: {ex.Message}");
-            }
-
-            WaitForKey();
-        }
-
-        #endregion
-
-        #region Mode 7: Examples
-
-        static void ShowExamples()
-        {
-            ShowSectionHeader("EXEMPLE DE COD", "📖");
-
-            Console.WriteLine("Alege un exemplu:\n");
-            Console.WriteLine("  [1] Factorial Recursiv");
-            Console.WriteLine("  [2] Fibonacci");
-            Console.WriteLine("  [3] Bubble Sort");
-            Console.WriteLine("  [4] Număr Prim");
-            Console.WriteLine("  [5] Calculator Simple");
-            Console.WriteLine("  [0] Înapoi");
-
-            Console.Write("\n➤ Opțiune: ");
-            string choice = Console.ReadLine()?.Trim();
-
-            Console.WriteLine();
-
-            string example = choice switch
-            {
-                "1" => @"// Factorial Recursiv
-function factorial(int n) {
-    if (n <= 1) {
-        return 1;
-    }
-    return n * factorial(n - 1);
-}
-
-int result = factorial(5);
-print(""Factorial 5 = "");
-print(result);",
-
-                "2" => @"// Fibonacci
-function fibonacci(int n) {
-    if (n <= 1) {
-        return n;
-    }
-    return fibonacci(n - 1) + fibonacci(n - 2);
-}
-
-print(""Fibonacci 10 = "");
-print(fibonacci(10));",
-
-                "3" => @"// Bubble Sort Simulation
-int a = 5;
-int b = 2;
-int c = 8;
-
-print(""Înainte de sortare:"");
-print(a);
-print(b);
-print(c);
-
-// Sortare
-if (a > b) {
-    int temp = a;
-    a = b;
-    b = temp;
-}
-
-if (b > c) {
-    int temp = b;
-    b = c;
-    c = temp;
-}
-
-if (a > b) {
-    int temp = a;
-    a = b;
-    b = temp;
-}
-
-print(""După sortare:"");
-print(a);
-print(b);
-print(c);",
-
-                "4" => @"// Verificare Număr Prim
-int number = 17;
-int isPrime = 1;
-
-if (number <= 1) {
-    isPrime = 0;
-} else {
-    for (int i = 2; i < number; i++) {
-        if (number % i == 0) {
-            isPrime = 0;
-            break;
-        }
-    }
-}
-
-if (isPrime == 1) {
-    print(""Număr prim!"");
-} else {
-    print(""Nu este prim."");
-}",
-
-                "5" => @"// Calculator Simple
-int a = 10;
-int b = 5;
-
-int suma = a + b;
-int diferenta = a - b;
-int produs = a * b;
-int cat = a / b;
-
-print(""Suma: "");
-print(suma);
-print(""Diferența: "");
-print(diferenta);
-print(""Produsul: "");
-print(produs);
-print(""Câtul: "");
-print(cat);",
-
-                "0" => null,
-                _ => null
-            };
-
-            if (example == null)
-            {
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("═══════════════════════════════════════════════════════════════");
-            Console.WriteLine("COD EXEMPLU:");
-            Console.WriteLine("═══════════════════════════════════════════════════════════════");
-            Console.ResetColor();
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(example);
-            Console.ResetColor();
-            Console.WriteLine();
-
-            Console.Write("➤ Vrei să execuți acest exemplu? (y/n): ");
-            string execute = Console.ReadLine()?.Trim().ToLower();
-
-            if (execute == "y" || execute == "yes" || execute == "da")
-            {
-                Console.WriteLine();
-                CompileAndExecute(example);
-            }
-
-            WaitForKey();
-        }
-
-        #endregion
-
-        #region Mode 8: About
-
-        static void ShowAbout()
-        {
-            ShowSectionHeader("DESPRE COMPILATOR", "ℹ️");
-
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("📚 COMPILATOR LFT - Academic Project");
-            Console.WriteLine();
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("FUNCȚIONALITĂȚI IMPLEMENTATE:");
-            Console.ResetColor();
-            Console.WriteLine();
-
-            ShowSuccess("✓ Analiză Lexicală completă");
-            ShowSuccess("✓ Analiză Sintactică (Parser recursive descent)");
-            ShowSuccess("✓ Analiză Semantică (type checking, scope)");
-            ShowSuccess("✓ Evaluator cu suport pentru:");
-            Console.WriteLine("    • Variabile (int, double, string, bool)");
-            Console.WriteLine("    • Operatori (+, -, *, /, %, ++, --, +=, -=, etc.)");
-            Console.WriteLine("    • Control flow (if/else, for, while, break, continue)");
-            Console.WriteLine("    • Funcții user-defined cu recursivitate");
-            Console.WriteLine("    • Arrays și indexare");
-            Console.WriteLine("    • 15+ funcții matematice built-in");
-            ShowSuccess("✓ Code Optimizer (7+ tehnici)");
-            ShowSuccess("✓ Static Analyzer (10+ detectări)");
-            ShowSuccess("✓ REPL interactiv");
-            ShowSuccess("✓ Suite teste automatizate");
-            ShowSuccess("✓ Scope management complet");
-            ShowSuccess("✓ Symbol table avansat");
-
-            Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("═══════════════════════════════════════════════════════════════");
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("  Proiect realizat pentru: Limbaje Formale și Translatoare");
-            Console.WriteLine("  Universitatea: UAIC Iași");
-            Console.WriteLine("  Referințe: Dragon Book, Grigoraș \"Proiectarea Compilatoarelor\"");
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("═══════════════════════════════════════════════════════════════");
-            Console.ResetColor();
-
-            WaitForKey();
+            string content = string.Join("\n", lines);
+            CompileAndRun(content);
         }
 
         #endregion
 
         #region Compilation and Execution
 
-        static void CompileAndExecute(string code)
+        static void CompileAndRun(string content)
+        {
+            // PHASE 1: LEXICAL ANALYSIS
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("PHASE 1: LEXICAL ANALYSIS");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 50));
+
+            var lexer = new Lexer(content);
+            var tokens = lexer.Tokenize();
+
+            Console.WriteLine($"Generated tokens: {tokens.Count}");
+
+            if (lexer.Errors.Any())
+            {
+                DisplayErrors("LEXICAL ERRORS", lexer.Errors);
+                return;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Lexical analysis successful!");
+            Console.ResetColor();
+
+            // Display tokens (optional)
+            Console.WriteLine("\nTokens:");
+            foreach (var token in tokens.Take(20))
+            {
+                Console.WriteLine($"  {token}");
+            }
+            if (tokens.Count > 20)
+            {
+                Console.WriteLine($"  ... and {tokens.Count - 20} more tokens");
+            }
+
+            // PHASE 2: SYNTACTIC AND SEMANTIC ANALYSIS
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("PHASE 2: SYNTACTIC & SEMANTIC ANALYSIS");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 50));
+
+            var parser = new Parser(content);
+            var program = parser.ParseProgram();
+
+            Console.WriteLine($"Parsed statements: {program.Statements.Count}");
+            Console.WriteLine($"Declared functions: {program.Functions.Count}");
+            Console.WriteLine($"Declared variables: {parser.SymbolTable.VariableCount}");
+
+            if (parser.Errors.Any())
+            {
+                DisplayErrors("SYNTACTIC/SEMANTIC ERRORS", parser.Errors);
+                return;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Syntactic analysis successful!");
+            Console.WriteLine("Semantic analysis successful!");
+            Console.ResetColor();
+
+            // DISPLAY SYNTAX TREE
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("SYNTAX TREE (AST)");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 50));
+
+            program.DisplayTree();
+
+            // PHASE 2.5: INTERMEDIATE CODE GENERATION (Grigoraș 6.4)
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("PHASE 2.5: INTERMEDIATE CODE GENERATION");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 50));
+
+            // Three-Address Code (Grigoraș 6.4.4)
+            var tacGenerator = new ThreeAddressCodeGenerator();
+            tacGenerator.Generate(program);
+            tacGenerator.DisplayTAC();
+
+            // Postfix Notation (Grigoraș 6.4.1)
+            var postfixGenerator = new PostfixGenerator();
+            postfixGenerator.Generate(program);
+            postfixGenerator.DisplayPostfix();
+
+            // PHASE 3: EVALUATION AND EXECUTION
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("PHASE 3: EVALUATION & EXECUTION");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 50));
+
+            var functions = new Dictionary<string, CompilatorLFT.Models.Statements.FunctionDeclaration>(parser.Functions);
+            var evaluator = new Evaluator(parser.SymbolTable, functions);
+            evaluator.ExecuteProgram(program);
+
+            if (evaluator.Errors.Any())
+            {
+                DisplayErrors("RUNTIME ERRORS", evaluator.Errors);
+                return;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("\nExecution successful!");
+            Console.ResetColor();
+
+            // FINAL SYMBOL TABLE
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("SYMBOL TABLE (FINAL STATE)");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 50));
+
+            parser.SymbolTable.DisplayVariables();
+        }
+
+        static void DisplayErrors(string title, IEnumerable<CompilationError> errors)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"\n{title}:");
+            foreach (var error in errors)
+            {
+                Console.WriteLine($"  X {error}");
+            }
+            Console.ResetColor();
+        }
+
+        #endregion
+
+        #region Automated Tests
+
+        static void RunAutomatedTests()
+        {
+            Console.WriteLine("\n" + new string('=', 60));
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("RUNNING AUTOMATED TESTS");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 60));
+
+            var tests = new List<(string name, string code, bool expectSuccess)>
+            {
+                // Basic tests
+                ("Simple declaration", "int a;", true),
+                ("Declaration with initialization", "int a = 5;", true),
+                ("Multiple declarations", "int a, b=3, c;", true),
+                ("Arithmetic expression", "3 + 5;", true),
+                ("Operator precedence", "3 + 4 * 5;", true),
+                ("Parentheses", "(3 + 4) * 5;", true),
+                ("Unary minus", "int a = -5;", true),
+                ("Double literal", "double x = 3.14;", true),
+                ("String literal", "string s = \"hello\";", true),
+                ("String concatenation", "string a = \"hello\"; string b = \" world\"; string c = a + b;", true),
+
+                // Assignments and operations
+                ("Assignment and calculation", "int a = 5; int b = 3; int c = a + b;", true),
+                ("Relational operators", "int a = 5; int b = 3; a > b;", true),
+
+                // Control structures
+                ("Simple if", "int a = 5; int b = 0; if (a > 3) { b = 10; }", true),
+                ("If-else", "int a = 2; int b = 0; if (a > 3) { b = 10; } else { b = 20; }", true),
+                ("While", "int i = 0; int sum = 0; while (i < 5) { sum = sum + i; i = i + 1; }", true),
+                ("For", "int sum = 0; for (int i = 0; i < 5; i = i + 1) { sum = sum + i; }", true),
+
+                // NEW TESTS: Print statement (Grigoraș 6.5)
+                ("Print with parens", "print(5 + 3);", true),
+                ("Print without parens", "print 42;", true),
+                ("Print string", "print(\"Hello World\");", true),
+
+                // NEW TESTS: Logical operators
+                ("Logical AND", "int a = 5; bool b = (a > 3) && (a < 10);", true),
+                ("Logical OR", "int a = 5; bool b = (a > 10) || (a > 3);", true),
+                ("Logical NOT", "bool a = true; bool b = !a;", true),
+
+                // NEW TESTS: Boolean type
+                ("Boolean declaration", "bool a = true;", true),
+                ("Boolean expression", "bool a = 5 > 3;", true),
+
+                // NEW TESTS: Comments
+                ("Single-line comment", "int a = 5; // this is a comment\nint b = 3;", true),
+                ("Multi-line comment", "int a = 5; /* multi\nline\ncomment */ int b = 3;", true),
+
+                // NEW TESTS: Increment/decrement
+                ("Postfix increment", "int a = 5; a++;", true),
+                ("Prefix increment", "int a = 5; ++a;", true),
+                ("Postfix decrement", "int a = 5; a--;", true),
+                ("For with i++", "int sum = 0; for (int i = 0; i < 5; i++) { sum = sum + i; }", true),
+
+                // NEW TESTS: Compound assignment
+                ("Plus equals", "int a = 5; a += 3;", true),
+                ("Minus equals", "int a = 5; a -= 3;", true),
+                ("Times equals", "int a = 5; a *= 3;", true),
+                ("Divide equals", "int a = 10; a /= 2;", true),
+                ("Modulo equals", "int a = 10; a %= 3;", true),
+
+                // NEW TESTS: Functions
+                ("Function declaration and call", "function add(int a, int b) { return a + b; } int result = add(5, 3);", true),
+                ("Function with return type", "int add(int a, int b) { return a + b; } int result = add(5, 3);", true),
+
+                // NEW TESTS: Built-in functions
+                ("sqrt function", "double x = sqrt(16);", true),
+                ("abs function", "int x = abs(-5);", true),
+
+                // NEW TESTS: Break and continue
+                ("Break in loop", "int i = 0; while (i < 10) { if (i == 5) { break; } i++; }", true),
+                ("Continue in loop", "int sum = 0; for (int i = 0; i < 10; i++) { if (i % 2 == 0) { continue; } sum += i; }", true),
+
+                // Error tests (should fail)
+                ("Error: undeclared variable", "x = 5;", false),
+                ("Error: duplicate declaration", "int a; int a;", false),
+                ("Error: unary plus", "int a = +5;", false),
+            };
+
+            int passed = 0;
+            int total = tests.Count;
+
+            foreach (var (name, code, expectSuccess) in tests)
+            {
+                bool success = RunTest(name, code, expectSuccess);
+                if (success)
+                    passed++;
+            }
+
+            // Final report
+            Console.WriteLine("\n" + new string('=', 60));
+            double percent = (double)passed / total * 100;
+
+            if (passed == total)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"ALL TESTS PASSED! ({passed}/{total} - {percent:F0}%)");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Tests passed: {passed}/{total} ({percent:F0}%)");
+            }
+            Console.ResetColor();
+        }
+
+        static bool RunTest(string name, string code, bool expectSuccess)
         {
             try
             {
-                // Phase 1: Lexical Analysis
-                ShowInfo("Faza 1: Analiză Lexicală...");
-                var lexer = new Lexer(code);
+                var parser = new Parser(code);
+                var program = parser.ParseProgram();
+
+                bool hasParseErrors = parser.Errors.Any();
+
+                if (!hasParseErrors)
+                {
+                    var funcs = new Dictionary<string, CompilatorLFT.Models.Statements.FunctionDeclaration>(parser.Functions);
+                    var evaluator = new Evaluator(parser.SymbolTable, funcs);
+                    evaluator.ExecuteProgram(program);
+
+                    bool hasEvalErrors = evaluator.Errors.Any();
+
+                    if (expectSuccess && !hasEvalErrors)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"  PASS: {name}");
+                        Console.ResetColor();
+                        return true;
+                    }
+                    else if (!expectSuccess && hasEvalErrors)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"  PASS: {name} (error detected correctly)");
+                        Console.ResetColor();
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (!expectSuccess)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"  PASS: {name} (error detected correctly)");
+                        Console.ResetColor();
+                        return true;
+                    }
+                }
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"  FAIL: {name}");
+                Console.ResetColor();
+                return false;
+            }
+            catch (Exception ex)
+            {
+                if (!expectSuccess)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"  PASS: {name} (error detected: {ex.Message})");
+                    Console.ResetColor();
+                    return true;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"  FAIL: {name} - Exception: {ex.Message}");
+                Console.ResetColor();
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Examples
+
+        static void DisplayExamples()
+        {
+            Console.WriteLine("\n" + new string('=', 60));
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("SOURCE CODE EXAMPLES");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 60));
+
+            var examples = new[]
+            {
+                ("Declarations and expressions", @"
+int a = 5;
+int b = 3;
+int sum = a + b;
+sum * 2;
+"),
+                ("Control structures with i++", @"
+int sum = 0;
+for (int i = 1; i <= 10; i++) {
+    sum += i;
+}
+print(sum);
+"),
+                ("Conditionals with logical operators", @"
+int x = 7;
+int result;
+if (x > 5 && x < 10) {
+    result = 100;
+} else {
+    result = 0;
+}
+print(result);
+"),
+                ("User-defined function", @"
+function factorial(int n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+int result = factorial(5);
+print(result);  // Should print 120
+"),
+                ("Built-in functions", @"
+double x = sqrt(16);
+double y = abs(-5);
+print(x);  // Should print 4
+print(y);  // Should print 5
+"),
+                ("Break and continue", @"
+int sum = 0;
+for (int i = 0; i < 10; i++) {
+    if (i == 5) {
+        break;
+    }
+    sum += i;
+}
+print(sum);  // 0+1+2+3+4 = 10
+"),
+                ("Comments", @"
+// This is a single-line comment
+int a = 5;  // Inline comment
+/* This is a
+   multi-line comment */
+int b = 3;
+print(a + b);
+")
+            };
+
+            foreach (var (title, code) in examples)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"\n--- {title} ---");
+                Console.ResetColor();
+                Console.WriteLine(code.Trim());
+            }
+        }
+
+        #endregion
+
+        #region Advanced Features
+
+        /// <summary>
+        /// Runs the interactive REPL.
+        /// </summary>
+        static void RunREPL()
+        {
+            Console.Clear();
+            var repl = new REPL();
+            repl.Start();
+        }
+
+        /// <summary>
+        /// Runs bytecode compilation and VM execution mode.
+        /// </summary>
+        static void RunBytecodeMode()
+        {
+            Console.WriteLine("\n" + new string('=', 60));
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("BYTECODE COMPILATION & VM EXECUTION");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 60));
+
+            Console.WriteLine("\nEnter source code (empty line to finish):");
+
+            var lines = new List<string>();
+            int lineNumber = 1;
+
+            while (true)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"{lineNumber,3} | ");
+                Console.ResetColor();
+
+                string line = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                lines.Add(line);
+                lineNumber++;
+            }
+
+            if (lines.Count == 0)
+            {
+                Console.WriteLine("No code entered!");
+                return;
+            }
+
+            string content = string.Join("\n", lines);
+
+            try
+            {
+                // Phase 1: Lexical analysis
+                var lexer = new Lexer(content);
                 var tokens = lexer.Tokenize();
 
                 if (lexer.Errors.Any())
                 {
-                    ShowError("Erori lexicale:");
-                    DisplayErrors(lexer.Errors);
+                    DisplayErrors("LEXICAL ERRORS", lexer.Errors);
                     return;
                 }
 
-                ShowSuccess($"Tokenizare completă! ({tokens.Count} tokeni)");
-                Console.WriteLine();
-
-                // Phase 2: Syntactic & Semantic Analysis
-                ShowInfo("Faza 2: Analiză Sintactică & Semantică...");
-                var parser = new Parser(code);
+                // Phase 2: Parsing
+                var parser = new Parser(content);
                 var program = parser.ParseProgram();
 
                 if (parser.Errors.Any())
                 {
-                    ShowError("Erori de parsing:");
-                    DisplayErrors(parser.Errors);
+                    DisplayErrors("SYNTACTIC/SEMANTIC ERRORS", parser.Errors);
                     return;
                 }
 
-                ShowSuccess($"Parsing complet! ({program.Statements.Count} instrucțiuni, {program.Functions.Count} funcții)");
-                Console.WriteLine();
-
-                // Phase 3: Display AST
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.WriteLine("ARBORE SINTACTIC:");
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\nCompilation successful!");
                 Console.ResetColor();
-                DisplayPrettyTree(program);
-                Console.WriteLine();
 
-                // Phase 4: Evaluation
-                ShowInfo("Faza 3: Evaluare și Execuție...");
-                Console.WriteLine();
+                // Phase 3: Bytecode compilation
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("BYTECODE COMPILATION");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
 
+                var compiler = new BytecodeCompiler();
+                var bytecodeProgram = compiler.Compile(program);
+
+                Console.WriteLine($"\nCompiled {bytecodeProgram.Instructions.Count} instructions");
+                Console.WriteLine($"Constant pool: {bytecodeProgram.ConstantPool.Count} entries");
+                Console.WriteLine($"Functions: {bytecodeProgram.FunctionTable.Count}");
+
+                // Display bytecode
+                bytecodeProgram.Display();
+
+                // Phase 4: VM execution
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("VM EXECUTION");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                Console.WriteLine("\nOutput:");
                 Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
-                Console.WriteLine("OUTPUT:");
-                Console.WriteLine("═══════════════════════════════════════════════════════════════");
+
+                var vm = new VirtualMachine();
+                vm.Execute(bytecodeProgram);
+
                 Console.ResetColor();
 
-                var evaluator = new Evaluator();
-                evaluator.ExecuteProgram(program);
+                // Display VM state
+                vm.DisplayState();
 
-                Console.WriteLine();
-                ShowSuccess("Execuție finalizată!");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"\nExecution complete! ({vm.InstructionsExecuted} instructions executed)");
+                Console.ResetColor();
             }
             catch (Exception ex)
             {
-                ShowError($"Eroare: {ex.Message}");
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\nError: {ex.Message}");
+                Console.ResetColor();
             }
         }
 
-        static void DisplayErrors(IEnumerable<CompilationError> errors)
+        /// <summary>
+        /// Runs advanced static analysis and optimization.
+        /// </summary>
+        static void RunAdvancedAnalysis()
         {
-            foreach (var error in errors)
+            Console.WriteLine("\n" + new string('=', 60));
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("ADVANCED STATIC ANALYSIS & OPTIMIZATION");
+            Console.ResetColor();
+            Console.WriteLine(new string('=', 60));
+
+            Console.WriteLine("\nEnter source code (empty line to finish):");
+
+            var lines = new List<string>();
+            int lineNumber = 1;
+
+            while (true)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"{lineNumber,3} | ");
+                Console.ResetColor();
+
+                string line = Console.ReadLine();
+
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                lines.Add(line);
+                lineNumber++;
+            }
+
+            if (lines.Count == 0)
+            {
+                Console.WriteLine("No code entered!");
+                return;
+            }
+
+            string content = string.Join("\n", lines);
+
+            try
+            {
+                // Phase 1: Lexical analysis
+                var lexer = new Lexer(content);
+                var tokens = lexer.Tokenize();
+
+                if (lexer.Errors.Any())
+                {
+                    DisplayErrors("LEXICAL ERRORS", lexer.Errors);
+                    return;
+                }
+
+                // Phase 2: Parsing
+                var parser = new Parser(content);
+                var program = parser.ParseProgram();
+
+                if (parser.Errors.Any())
+                {
+                    DisplayErrors("SYNTACTIC/SEMANTIC ERRORS", parser.Errors);
+                    return;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\nParsing successful!");
+                Console.ResetColor();
+
+                // Phase 3: Static Analysis
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("STATIC ANALYSIS");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                var analyzer = new StaticAnalyzer(parser.SymbolTable);
+                analyzer.Analyze(program);
+                analyzer.DisplayWarnings();
+
+                // Phase 4: Code Optimization
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("CODE OPTIMIZATION");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                // Display original AST
+                Console.WriteLine("\nOriginal AST:");
+                program.DisplayTree();
+
+                var optimizer = new CodeOptimizer();
+                program = optimizer.Optimize(program);
+
+                optimizer.DisplayStatistics();
+
+                // Display optimized AST
+                Console.WriteLine("\nOptimized AST:");
+                program.DisplayTree();
+
+                // Phase 5: Generate optimized TAC
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("OPTIMIZED THREE-ADDRESS CODE");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                var tacGenerator = new ThreeAddressCodeGenerator();
+                tacGenerator.Generate(program);
+                tacGenerator.DisplayTAC();
+
+                // Summary
+                Console.WriteLine("\n" + new string('=', 50));
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("ANALYSIS SUMMARY");
+                Console.ResetColor();
+                Console.WriteLine(new string('=', 50));
+
+                Console.WriteLine($"\n{analyzer.GetSummary()}");
+                Console.WriteLine(optimizer.GetSummary());
+
+            }
+            catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write($"  [{error.Line},{error.Column}] ");
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write($"{error.Type}: ");
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.WriteLine(error.Message);
+                Console.WriteLine($"\nError: {ex.Message}");
                 Console.ResetColor();
             }
-        }
-
-        #endregion
-
-        #region Pretty Tree Display (Like Colleague's Project)
-
-        static void DisplayPrettyTree(ProgramNode program)
-        {
-            // Display functions
-            if (program.Functions.Any())
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("├── Funcții:");
-                Console.ResetColor();
-
-                var lastFunction = program.Functions.Last();
-                foreach (var function in program.Functions)
-                {
-                    bool isLast = function == lastFunction;
-                    string prefix = isLast ? "    └──" : "    ├──";
-                    Console.ForegroundColor = ConsoleColor.Magenta;
-                    Console.WriteLine($"{prefix} {function.Name.Text}");
-                    Console.ResetColor();
-                }
-            }
-
-            // Display statements
-            if (program.Statements.Any())
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("└── Instrucțiuni:");
-                Console.ResetColor();
-
-                var lastStmt = program.Statements.Last();
-                foreach (var stmt in program.Statements)
-                {
-                    bool isLast = stmt == lastStmt;
-                    DisplayNode(stmt, "    ", isLast);
-                }
-            }
-        }
-
-        static void DisplayNode(SyntaxNode node, string indent, bool isLast)
-        {
-            if (node == null) return;
-
-            string prefix = isLast ? "└──" : "├──";
-            string childIndent = indent + (isLast ? "    " : "│   ");
-
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write(indent + prefix);
-            Console.ForegroundColor = ConsoleColor.White;
-
-            // Display node type and value
-            Console.Write($" {node.Type}");
-
-            if (node is Token token && token.Value != null)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write($" = {token.Value}");
-            }
-
-            Console.WriteLine();
-            Console.ResetColor();
-
-            // Display children
-            var children = node.GetChildren().ToList();
-            if (children.Any())
-            {
-                var lastChild = children.Last();
-                foreach (var child in children)
-                {
-                    DisplayNode(child, childIndent, child == lastChild);
-                }
-            }
-        }
-
-        #endregion
-
-        #region Exit
-
-        static void ExitProgram()
-        {
-            Console.Clear();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine();
-            Console.WriteLine("  ╔═══════════════════════════════════════════════════╗");
-            Console.WriteLine("  ║                                                   ║");
-            Console.WriteLine("  ║         Mulțumim pentru utilizare! 👋            ║");
-            Console.WriteLine("  ║                                                   ║");
-            Console.WriteLine("  ║          🚀 COMPILATOR LFT - v1.0 🚀             ║");
-            Console.WriteLine("  ║                                                   ║");
-            Console.WriteLine("  ╚═══════════════════════════════════════════════════╝");
-            Console.WriteLine();
-            Console.ResetColor();
         }
 
         #endregion
