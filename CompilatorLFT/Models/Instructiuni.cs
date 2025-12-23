@@ -447,11 +447,13 @@ namespace CompilatorLFT.Models.Statements
     {
         public Token TypeKeyword { get; }
         public Token Identifier { get; }
+        public bool IsArrayType { get; }
 
-        public Parameter(Token typeKeyword, Token identifier)
+        public Parameter(Token typeKeyword, Token identifier, bool isArrayType = false)
         {
             TypeKeyword = typeKeyword ?? throw new ArgumentNullException(nameof(typeKeyword));
             Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+            IsArrayType = isArrayType;
         }
     }
 

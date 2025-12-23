@@ -319,8 +319,18 @@ namespace CompilatorLFT.Core
                             $"expected parameter type but found '{paramType.Type}'"));
                     }
 
+                    // Check for array type syntax: int[]
+                    bool isArrayParam = false;
+                    if (CurrentToken.Type == TokenType.OpenBracket &&
+                        NextToken.Type == TokenType.CloseBracket)
+                    {
+                        ConsumeToken(); // Skip '['
+                        ConsumeToken(); // Skip ']'
+                        isArrayParam = true;
+                    }
+
                     var paramName = ExpectType(TokenType.Identifier);
-                    parameters.Add(new Parameter(paramType, paramName));
+                    parameters.Add(new Parameter(paramType, paramName, isArrayParam));
 
                 } while (CurrentToken.Type == TokenType.Comma);
             }
@@ -330,7 +340,7 @@ namespace CompilatorLFT.Core
             // Add parameters to symbol table for body parsing
             foreach (var param in parameters)
             {
-                var dataType = SymbolTable.ConvertToDataType(param.TypeKeyword.Type);
+                var dataType = param.IsArrayType ? DataType.Array : SymbolTable.ConvertToDataType(param.TypeKeyword.Type);
                 _symbolTable.Add(param.Identifier.Text, dataType, param.Identifier.Line, param.Identifier.Column, _errors);
             }
 
@@ -552,11 +562,23 @@ namespace CompilatorLFT.Core
 
         /// <summary>
         /// Parses a variable declaration.
+        /// Supports array type syntax: int[] arr = [1, 2, 3];
         /// </summary>
         private DeclarationStatement ParseDeclaration()
         {
             var typeKeyword = ConsumeToken();
             var dataType = SymbolTable.ConvertToDataType(typeKeyword.Type);
+
+            // Check for array type syntax: int[]
+            bool isArrayType = false;
+            if (CurrentToken.Type == TokenType.OpenBracket &&
+                NextToken.Type == TokenType.CloseBracket)
+            {
+                ConsumeToken(); // Skip '['
+                ConsumeToken(); // Skip ']'
+                isArrayType = true;
+                dataType = DataType.Array;
+            }
 
             var declarations = new List<(Token, Expression)>();
 
