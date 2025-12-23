@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CompilatorLFT.Core;
 using CompilatorLFT.Models;
+using CompilatorLFT.Utils;
 
 namespace CompilatorLFT.Tests
 {
@@ -240,10 +241,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = 5; int b = a + 3;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var b = parser.SymbolTable.Get("b");
+                var errors = new List<CompilationError>();
+                var b = evaluator.ScopeManager.LookupVariable("b", 0, 0, errors);
                 return b != null && b.IsInitialized && (int)b.Value == 8;
             });
 
@@ -252,10 +254,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = 3 + 4 * 5;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var a = parser.SymbolTable.Get("a");
+                var errors = new List<CompilationError>();
+                var a = evaluator.ScopeManager.LookupVariable("a", 0, 0, errors);
                 return a != null && (int)a.Value == 23; // 3 + 20 = 23
             });
 
@@ -264,10 +267,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = 5; double b = 2.5; double c = a + b;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var c = parser.SymbolTable.Get("c");
+                var errors = new List<CompilationError>();
+                var c = evaluator.ScopeManager.LookupVariable("c", 0, 0, errors);
                 return c != null && Math.Abs((double)c.Value - 7.5) < 0.001;
             });
 
@@ -276,10 +280,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("double x = 7.8; int a = x;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var a = parser.SymbolTable.Get("a");
+                var errors = new List<CompilationError>();
+                var a = evaluator.ScopeManager.LookupVariable("a", 0, 0, errors);
                 return a != null && (int)a.Value == 7;
             });
 
@@ -288,10 +293,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("string s1 = \"hello\"; string s2 = \" world\"; string s3 = s1 + s2;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var s3 = parser.SymbolTable.Get("s3");
+                var errors = new List<CompilationError>();
+                var s3 = evaluator.ScopeManager.LookupVariable("s3", 0, 0, errors);
                 return s3 != null && (string)s3.Value == "hello world";
             });
 
@@ -300,11 +306,12 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = -5; int b = -a;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var a = parser.SymbolTable.Get("a");
-                var b = parser.SymbolTable.Get("b");
+                var errors = new List<CompilationError>();
+                var a = evaluator.ScopeManager.LookupVariable("a", 0, 0, errors);
+                var b = evaluator.ScopeManager.LookupVariable("b", 0, 0, errors);
                 return (int)a.Value == -5 && (int)b.Value == 5;
             });
         }
@@ -320,10 +327,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int sum = 0; for (int i = 0; i < 5; i = i + 1) { sum = sum + i; }");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var sum = parser.SymbolTable.Get("sum");
+                var errors = new List<CompilationError>();
+                var sum = evaluator.ScopeManager.LookupVariable("sum", 0, 0, errors);
                 return sum != null && (int)sum.Value == 10; // 0+1+2+3+4
             });
 
@@ -332,11 +340,12 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int i = 0; int sum = 0; while (i < 5) { sum = sum + i; i = i + 1; }");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var sum = parser.SymbolTable.Get("sum");
-                var i = parser.SymbolTable.Get("i");
+                var errors = new List<CompilationError>();
+                var sum = evaluator.ScopeManager.LookupVariable("sum", 0, 0, errors);
+                var i = evaluator.ScopeManager.LookupVariable("i", 0, 0, errors);
                 return (int)sum.Value == 10 && (int)i.Value == 5;
             });
 
@@ -345,10 +354,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = 5; int b = 0; if (a > 3) { b = 10; }");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var b = parser.SymbolTable.Get("b");
+                var errors = new List<CompilationError>();
+                var b = evaluator.ScopeManager.LookupVariable("b", 0, 0, errors);
                 return (int)b.Value == 10;
             });
 
@@ -357,10 +367,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = 2; int b = 0; if (a > 3) { b = 10; } else { b = 20; }");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var b = parser.SymbolTable.Get("b");
+                var errors = new List<CompilationError>();
+                var b = evaluator.ScopeManager.LookupVariable("b", 0, 0, errors);
                 return (int)b.Value == 20;
             });
 
@@ -369,10 +380,11 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = 5; int b = 3; int r = 0; if (a >= b) { r = 1; }");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
-                var r = parser.SymbolTable.Get("r");
+                var errors = new List<CompilationError>();
+                var r = evaluator.ScopeManager.LookupVariable("r", 0, 0, errors);
                 return (int)r.Value == 1;
             });
         }
@@ -398,11 +410,14 @@ namespace CompilatorLFT.Tests
             Test("Error: Duplicate declaration", () =>
             {
                 var parser = new Parser("int a; int a;");
-                parser.ParseProgram();
+                var program = parser.ParseProgram();
+                var evaluator = new Evaluator();
+                evaluator.ExecuteProgram(program);
 
-                return parser.Errors.Any(e =>
+                // Duplicate declaration is now detected during execution
+                return evaluator.Errors.Any(e =>
                     e.Type == ErrorType.Semantic &&
-                    e.Message.Contains("duplicate"));
+                    e.Message.Contains("already declared"));
             });
 
             // Test 27: Unary plus (forbidden)
@@ -420,7 +435,7 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("int a = 5; int b = 0; int c = a / b;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
                 return evaluator.Errors.Any(e =>
@@ -432,7 +447,7 @@ namespace CompilatorLFT.Tests
             {
                 var parser = new Parser("string s = \"test\"; int n = 5; string r = s + n;");
                 var program = parser.ParseProgram();
-                var evaluator = new Evaluator(parser.SymbolTable);
+                var evaluator = new Evaluator();
                 evaluator.ExecuteProgram(program);
 
                 return evaluator.Errors.Any(e =>
