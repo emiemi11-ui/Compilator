@@ -1393,12 +1393,34 @@ namespace CompilatorLFT.Core
 
         private object EvaluateRelationalOperation(object left, Token op, object right)
         {
-            // Comparisons only between numbers
+            // SPECIAL CASE: String equality/inequality comparison
+            if (left is string && right is string)
+            {
+                // Only == and != are allowed for strings
+                if (op.Type == TokenType.EqualEqual)
+                {
+                    return (string)left == (string)right;
+                }
+                else if (op.Type == TokenType.NotEqual)
+                {
+                    return (string)left != (string)right;
+                }
+                else
+                {
+                    // <, >, <=, >= not supported for strings
+                    _errors.Add(CompilationError.Semantic(
+                        op.Line, op.Column,
+                        "only == and != operators can be applied to strings"));
+                    return null;
+                }
+            }
+
+            // ORIGINAL: Comparisons between numbers
             if (!IsNumber(left) || !IsNumber(right))
             {
                 _errors.Add(CompilationError.Semantic(
                     op.Line, op.Column,
-                    "relational operators can only be applied to numbers"));
+                    "relational operators can only be applied to numbers or strings"));
                 return null;
             }
 
