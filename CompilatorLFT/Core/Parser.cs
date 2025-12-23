@@ -1104,6 +1104,22 @@ namespace CompilatorLFT.Core
             {
                 var id = ConsumeToken();
 
+                // Compound assignment as expression: (p += 5) * 2
+                if (CurrentToken.IsCompoundAssignment())
+                {
+                    var op = ConsumeToken();
+                    var rightExpr = ParseExpression();
+
+                    if (!_symbolTable.Exists(id.Text))
+                    {
+                        _errors.Add(CompilationError.Semantic(
+                            id.Line, id.Column,
+                            $"variable '{id.Text}' was not declared"));
+                    }
+
+                    return new CompoundAssignmentExpression(id, op, rightExpr);
+                }
+
                 // Function call: id(args)
                 if (CurrentToken.Type == TokenType.OpenParen)
                 {

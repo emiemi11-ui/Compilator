@@ -1,0 +1,29 @@
+// Test: Compound assignments in expressions
+// Feature: (p += 5) returns the new value of p
+
+int p = 20;
+int q = (p += 5) * 2;
+
+print("p = ");
+print(p);
+print("q = ");
+print(q);
+
+// Expected output:
+// p = 25
+// q = 50
+
+// More tests
+int x = 10;
+int y = (x -= 3) + 5;  // x becomes 7, y = 7 + 5 = 12
+print("x = ");
+print(x);
+print("y = ");
+print(y);
+
+int a = 4;
+int b = (a *= 3) / 2;  // a becomes 12, b = 12 / 2 = 6
+print("a = ");
+print(a);
+print("b = ");
+print(b);
