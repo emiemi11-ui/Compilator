@@ -54,6 +54,9 @@ namespace CompilatorLFT.Core
         private readonly Dictionary<string, FunctionDeclaration> _functions;
         private readonly HashSet<string> _builtInFunctions;
 
+        // Scope management for proper variable scoping
+        private readonly Stack<HashSet<string>> _scopeStack;
+
         #endregion
 
         #region Properties
@@ -93,6 +96,7 @@ namespace CompilatorLFT.Core
             _errors = new List<CompilationError>();
             _symbolTable = new SymbolTable();
             _functions = new Dictionary<string, FunctionDeclaration>();
+            _scopeStack = new Stack<HashSet<string>>();
 
             // Built-in functions (Flex & Bison style)
             _builtInFunctions = new HashSet<string>
@@ -104,6 +108,46 @@ namespace CompilatorLFT.Core
 
             // Add lexical errors
             _errors.AddRange(lexer.Errors);
+        }
+
+        #endregion
+
+        #region Scope Management
+
+        /// <summary>
+        /// Pushes a new scope onto the scope stack.
+        /// Variables declared in this scope will be removed when PopScope is called.
+        /// </summary>
+        private void PushScope()
+        {
+            _scopeStack.Push(new HashSet<string>());
+        }
+
+        /// <summary>
+        /// Pops the current scope and removes all variables declared in it.
+        /// </summary>
+        private void PopScope()
+        {
+            if (_scopeStack.Count > 0)
+            {
+                var scopeVariables = _scopeStack.Pop();
+                _symbolTable.RemoveAll(scopeVariables);
+            }
+        }
+
+        /// <summary>
+        /// Adds a variable to the symbol table and tracks it in the current scope.
+        /// </summary>
+        private void AddVariableToScope(string name, DataType type, int line, int column)
+        {
+            if (_symbolTable.Add(name, type, line, column, _errors))
+            {
+                // Track variable in current scope for cleanup
+                if (_scopeStack.Count > 0)
+                {
+                    _scopeStack.Peek().Add(name);
+                }
+            }
         }
 
         #endregion
@@ -337,15 +381,21 @@ namespace CompilatorLFT.Core
 
             var closeParen = ExpectType(TokenType.CloseParen);
 
+            // Push function scope for parameters and local variables
+            PushScope();
+
             // Add parameters to symbol table for body parsing
             foreach (var param in parameters)
             {
                 var dataType = param.IsArrayType ? DataType.Array : SymbolTable.ConvertToDataType(param.TypeKeyword.Type);
-                _symbolTable.Add(param.Identifier.Text, dataType, param.Identifier.Line, param.Identifier.Column, _errors);
+                AddVariableToScope(param.Identifier.Text, dataType, param.Identifier.Line, param.Identifier.Column);
             }
 
             // Body
             var body = ParseBlock();
+
+            // Pop function scope - removes function parameters and local variables
+            PopScope();
 
             return new FunctionDeclaration(
                 returnType, functionKeyword, name,
@@ -586,8 +636,8 @@ namespace CompilatorLFT.Core
             {
                 var id = ExpectType(TokenType.Identifier);
 
-                // Add to symbol table
-                _symbolTable.Add(id.Text, dataType, id.Line, id.Column, _errors);
+                // Add to symbol table (with scope tracking if in a scope)
+                AddVariableToScope(id.Text, dataType, id.Line, id.Column);
 
                 Expression expr = null;
 
@@ -609,11 +659,16 @@ namespace CompilatorLFT.Core
 
         /// <summary>
         /// Parses a FOR statement.
+        /// For loops have their own scope - variables declared in the initialization
+        /// are only visible within the for loop and are removed when the loop ends.
         /// </summary>
         private ForStatement ParseFor()
         {
             var forKeyword = ConsumeToken();
             var openParen = ExpectType(TokenType.OpenParen);
+
+            // Push a new scope for the for loop
+            PushScope();
 
             // Initialization
             Statement init = null;
@@ -646,6 +701,9 @@ namespace CompilatorLFT.Core
 
             // Body
             var body = ParseStatement();
+
+            // Pop the for loop scope - removes loop variables from symbol table
+            PopScope();
 
             return new ForStatement(
                 forKeyword, openParen,

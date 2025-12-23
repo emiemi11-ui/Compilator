@@ -183,6 +183,28 @@ namespace CompilatorLFT.Core
             _variables.Clear();
         }
 
+        /// <summary>
+        /// Removes a variable from the table (for scope cleanup).
+        /// </summary>
+        /// <param name="name">Variable name to remove</param>
+        /// <returns>True if removed, False if not found</returns>
+        public bool Remove(string name)
+        {
+            return _variables.Remove(name);
+        }
+
+        /// <summary>
+        /// Removes multiple variables from the table (for scope cleanup).
+        /// </summary>
+        /// <param name="names">Variable names to remove</param>
+        public void RemoveAll(IEnumerable<string> names)
+        {
+            foreach (var name in names)
+            {
+                _variables.Remove(name);
+            }
+        }
+
         #endregion
 
         #region Helper Methods
