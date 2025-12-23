@@ -106,7 +106,8 @@ namespace CompilatorLFT.Core
             {
                 "print", "sqrt", "abs", "exp", "log", "sin", "cos", "tan",
                 "pow", "min", "max", "floor", "ceil", "round", "length",
-                "input", "parseInt", "parseDouble", "toString"
+                "input", "parseInt", "parseDouble", "toString",
+                "array", "len"
             };
 
             // Add lexical errors

@@ -38,7 +38,6 @@ namespace CompilatorLFT.Core
             // New type keywords
             { "struct", TokenType.KeywordStruct },
             { "pointer", TokenType.KeywordPointer },
-            { "array", TokenType.KeywordArray },
             { "new", TokenType.KeywordNew },
             { "null", TokenType.KeywordNull },
             // Control flow keywords
