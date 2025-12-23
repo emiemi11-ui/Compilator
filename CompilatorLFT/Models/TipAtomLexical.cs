@@ -44,6 +44,21 @@ namespace CompilatorLFT.Models
         /// <summary>Keyword 'bool' for boolean type</summary>
         KeywordBool,
 
+        /// <summary>Keyword 'struct' for structure type</summary>
+        KeywordStruct,
+
+        /// <summary>Keyword 'pointer' for pointer type</summary>
+        KeywordPointer,
+
+        /// <summary>Keyword 'array' for array type</summary>
+        KeywordArray,
+
+        /// <summary>Keyword 'new' for allocation</summary>
+        KeywordNew,
+
+        /// <summary>Keyword 'null' for null value</summary>
+        KeywordNull,
+
         // ==================== KEYWORDS - CONTROL FLOW ====================
 
         /// <summary>Keyword 'for' for loop</summary>
@@ -186,6 +201,15 @@ namespace CompilatorLFT.Models
         /// <summary>Colon ':'</summary>
         Colon,
 
+        /// <summary>Dot '.'</summary>
+        Dot,
+
+        /// <summary>Ampersand '&amp;' for address-of</summary>
+        Ampersand,
+
+        /// <summary>Arrow '->' for pointer member access</summary>
+        Arrow,
+
         // ==================== SPECIAL ====================
 
         /// <summary>Whitespace (ignored in parsing)</summary>
@@ -232,6 +256,18 @@ namespace CompilatorLFT.Models
         /// <summary>Node for array access expression (arr[i])</summary>
         ArrayAccessExpression,
 
+        /// <summary>Node for array literal expression [1, 2, 3]</summary>
+        ArrayLiteralExpression,
+
+        /// <summary>Node for member access expression (obj.member)</summary>
+        MemberAccessExpression,
+
+        /// <summary>Node for address-of expression (&amp;var)</summary>
+        AddressOfExpression,
+
+        /// <summary>Node for dereference expression (*ptr)</summary>
+        DereferenceExpression,
+
         /// <summary>Node for increment/decrement expression</summary>
         IncrementExpression,
 
@@ -272,6 +308,9 @@ namespace CompilatorLFT.Models
 
         /// <summary>Node for function declaration</summary>
         FunctionDeclaration,
+
+        /// <summary>Node for struct declaration</summary>
+        StructDeclaration,
 
         /// <summary>Root node for complete program</summary>
         Program
@@ -314,6 +353,15 @@ namespace CompilatorLFT.Models
 
         /// <summary>Void type (void) - for functions without return value</summary>
         Void,
+
+        /// <summary>Array type (array)</summary>
+        Array,
+
+        /// <summary>Pointer type (pointer)</summary>
+        Pointer,
+
+        /// <summary>Struct type (struct)</summary>
+        Struct,
 
         /// <summary>Undefined type or error</summary>
         Unknown

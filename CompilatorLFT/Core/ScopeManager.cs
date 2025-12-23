@@ -305,7 +305,7 @@ namespace CompilatorLFT.Core
         private bool CheckTypeCompatibility(DataType type, object value)
         {
             if (value == null)
-                return false;
+                return type == DataType.Pointer || type == DataType.Struct || type == DataType.Array;
 
             return type switch
             {
@@ -313,7 +313,10 @@ namespace CompilatorLFT.Core
                 DataType.Double => value is int || value is double || value is bool,
                 DataType.String => value is string,
                 DataType.Bool => value is bool || value is int || value is double,
-                _ => false
+                DataType.Array => value is System.Collections.Generic.List<object>,
+                DataType.Pointer => value is PointerValue,
+                DataType.Struct => value is StructValue || value is Dictionary<string, object>,
+                _ => true  // Unknown types accept anything
             };
         }
 
@@ -337,6 +340,9 @@ namespace CompilatorLFT.Core
                 DataType.Bool when value is bool b => b,
                 DataType.Bool when value is int i => i != 0,
                 DataType.Bool when value is double d => Math.Abs(d) > 1e-10,
+                DataType.Array => value,  // Arrays pass through as-is
+                DataType.Pointer => value,  // Pointers pass through as-is
+                DataType.Struct => value,  // Structs pass through as-is
                 _ => value
             };
         }

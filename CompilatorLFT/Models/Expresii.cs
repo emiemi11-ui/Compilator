@@ -527,4 +527,149 @@ namespace CompilatorLFT.Models.Expressions
     }
 
     #endregion
+
+    #region Array Literal Expression
+
+    /// <summary>
+    /// Array literal expression for creating arrays inline.
+    /// </summary>
+    /// <example>
+    /// [1, 2, 3], ["a", "b", "c"]
+    /// </example>
+    public sealed class ArrayLiteralExpression : Expression
+    {
+        /// <summary>Open bracket '['.</summary>
+        public Token OpenBracket { get; }
+
+        /// <summary>The list of element expressions.</summary>
+        public List<Expression> Elements { get; }
+
+        /// <summary>Close bracket ']'.</summary>
+        public Token CloseBracket { get; }
+
+        public override TokenType Type => TokenType.ArrayLiteralExpression;
+
+        public ArrayLiteralExpression(
+            Token openBracket,
+            List<Expression> elements,
+            Token closeBracket)
+        {
+            OpenBracket = openBracket ?? throw new ArgumentNullException(nameof(openBracket));
+            Elements = elements ?? new List<Expression>();
+            CloseBracket = closeBracket ?? throw new ArgumentNullException(nameof(closeBracket));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return OpenBracket;
+            foreach (var elem in Elements)
+                yield return elem;
+            yield return CloseBracket;
+        }
+    }
+
+    #endregion
+
+    #region Struct Member Access Expression
+
+    /// <summary>
+    /// Struct member access expression.
+    /// </summary>
+    /// <example>
+    /// person.name, point.x
+    /// </example>
+    public sealed class MemberAccessExpression : Expression
+    {
+        /// <summary>The object expression being accessed.</summary>
+        public Expression Object { get; }
+
+        /// <summary>The dot operator '.'.</summary>
+        public Token Dot { get; }
+
+        /// <summary>The member name.</summary>
+        public Token Member { get; }
+
+        public override TokenType Type => TokenType.MemberAccessExpression;
+
+        public MemberAccessExpression(
+            Expression obj,
+            Token dot,
+            Token member)
+        {
+            Object = obj ?? throw new ArgumentNullException(nameof(obj));
+            Dot = dot ?? throw new ArgumentNullException(nameof(dot));
+            Member = member ?? throw new ArgumentNullException(nameof(member));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Object;
+            yield return Dot;
+            yield return Member;
+        }
+    }
+
+    #endregion
+
+    #region Pointer Operations
+
+    /// <summary>
+    /// Address-of expression (&amp;variable).
+    /// </summary>
+    /// <example>
+    /// &amp;x, &amp;arr[0]
+    /// </example>
+    public sealed class AddressOfExpression : Expression
+    {
+        /// <summary>The ampersand operator '&amp;'.</summary>
+        public Token Operator { get; }
+
+        /// <summary>The expression to get address of.</summary>
+        public Expression Operand { get; }
+
+        public override TokenType Type => TokenType.AddressOfExpression;
+
+        public AddressOfExpression(Token op, Expression operand)
+        {
+            Operator = op ?? throw new ArgumentNullException(nameof(op));
+            Operand = operand ?? throw new ArgumentNullException(nameof(operand));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Operator;
+            yield return Operand;
+        }
+    }
+
+    /// <summary>
+    /// Dereference expression (*pointer).
+    /// </summary>
+    /// <example>
+    /// *ptr, **pptr
+    /// </example>
+    public sealed class DereferenceExpression : Expression
+    {
+        /// <summary>The star operator '*'.</summary>
+        public Token Operator { get; }
+
+        /// <summary>The pointer expression to dereference.</summary>
+        public Expression Operand { get; }
+
+        public override TokenType Type => TokenType.DereferenceExpression;
+
+        public DereferenceExpression(Token op, Expression operand)
+        {
+            Operator = op ?? throw new ArgumentNullException(nameof(op));
+            Operand = operand ?? throw new ArgumentNullException(nameof(operand));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Operator;
+            yield return Operand;
+        }
+    }
+
+    #endregion
 }

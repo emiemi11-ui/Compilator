@@ -970,6 +970,12 @@ namespace CompilatorLFT.Core
                 return new ParenthesizedExpression(openParen, expr, closeParen);
             }
 
+            // Array literal [1, 2, 3]
+            if (CurrentToken.Type == TokenType.OpenBracket)
+            {
+                return ParseArrayLiteral();
+            }
+
             // Integer number
             if (CurrentToken.Type == TokenType.IntegerNumber)
             {
@@ -1107,6 +1113,46 @@ namespace CompilatorLFT.Core
             }
 
             return array;
+        }
+
+        /// <summary>
+        /// Parses an array literal expression [1, 2, 3].
+        /// </summary>
+        private Expression ParseArrayLiteral()
+        {
+            var openBracket = ConsumeToken();  // Skip '['
+            var elements = new List<Expression>();
+
+            // Parse elements
+            if (!Peek(TokenType.CloseBracket))
+            {
+                elements.Add(ParseExpression());
+
+                while (CurrentToken.Type == TokenType.Comma)
+                {
+                    ConsumeToken();  // Skip ','
+                    elements.Add(ParseExpression());
+                }
+            }
+
+            var closeBracket = ExpectType(TokenType.CloseBracket);
+
+            return new ArrayLiteralExpression(openBracket, elements, closeBracket);
+        }
+
+        /// <summary>
+        /// Parses member access expression (obj.member or obj->member).
+        /// </summary>
+        private Expression ParseMemberAccess(Expression obj)
+        {
+            while (Peek(TokenType.Dot, TokenType.Arrow))
+            {
+                var dot = ConsumeToken();
+                var member = ExpectType(TokenType.Identifier);
+                obj = new MemberAccessExpression(obj, dot, member);
+            }
+
+            return obj;
         }
 
         #endregion
