@@ -67,6 +67,9 @@ namespace CompilatorLFT.Core
         /// <summary>Next character in text.</summary>
         private char NextChar => _position + 1 < _text.Length ? _text[_position + 1] : '\0';
 
+        /// <summary>Character two positions ahead in text.</summary>
+        private char PeekNextChar => _position + 2 < _text.Length ? _text[_position + 2] : '\0';
+
         /// <summary>List of lexical errors.</summary>
         public IReadOnlyList<CompilationError> Errors => _errors;
 
@@ -142,6 +145,12 @@ namespace CompilatorLFT.Core
             if (CurrentChar == '/' && NextChar == '*')
             {
                 return SkipMultiLineComment();
+            }
+
+            // TRIPLE-DASH COMMENTS (--- ...)
+            if (CurrentChar == '-' && NextChar == '-' && PeekNextChar == '-')
+            {
+                return SkipTripleDashComment();
             }
 
             // NUMBERS
@@ -226,6 +235,41 @@ namespace CompilatorLFT.Core
             // Return whitespace token (will be skipped)
             return new Token(
                 TokenType.Whitespace, "/*comment*/", null,
+                lineStart, columnStart, start);
+        }
+
+        /// <summary>
+        /// Skips a triple-dash comment (--- ...).
+        /// Can be either line comment (--- to end of line) or inline (--- text ---).
+        /// </summary>
+        private Token SkipTripleDashComment()
+        {
+            int start = _position;
+            int lineStart = _line;
+            int columnStart = _column;
+
+            // Skip ---
+            Advance();
+            Advance();
+            Advance();
+
+            // Skip until end of line, end of file, or closing ---
+            while (CurrentChar != '\n' && CurrentChar != '\0')
+            {
+                // Check for closing ---
+                if (CurrentChar == '-' && NextChar == '-' && PeekNextChar == '-')
+                {
+                    Advance(); // skip first -
+                    Advance(); // skip second -
+                    Advance(); // skip third -
+                    break;
+                }
+                Advance();
+            }
+
+            // Return whitespace token (will be skipped)
+            return new Token(
+                TokenType.Whitespace, "---comment---", null,
                 lineStart, columnStart, start);
         }
 
