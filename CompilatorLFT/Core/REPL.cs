@@ -35,6 +35,7 @@ namespace CompilatorLFT.Core
         private bool _running;
         private int _lineNumber;
         private bool _showAst;
+        private bool _showTac;
         private bool _verbose;
 
         #endregion
@@ -143,6 +144,17 @@ namespace CompilatorLFT.Core
                     program.DisplayTree();
                 }
 
+                // Show TAC if enabled
+                if (_showTac)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("\n=== TAC ===");
+                    Console.ResetColor();
+                    var tacGenerator = new ThreeAddressCodeGenerator();
+                    tacGenerator.Generate(program);
+                    tacGenerator.DisplayTAC();
+                }
+
                 // Evaluate using persistent ScopeManager
                 // Variables are declared during execution and persist across REPL commands
                 var evaluator = new Evaluator(_scopeManager, _functions);
@@ -176,6 +188,7 @@ namespace CompilatorLFT.Core
             _errors.Clear();
             _lineNumber = 1;
             _showAst = false;
+            _showTac = false;
             _verbose = false;
         }
 
@@ -281,6 +294,11 @@ namespace CompilatorLFT.Core
                     Console.WriteLine($"AST display: {(_showAst ? "ON" : "OFF")}");
                     break;
 
+                case ":tac":
+                    _showTac = !_showTac;
+                    Console.WriteLine($"TAC display: {(_showTac ? "ON" : "OFF")}");
+                    break;
+
                 case ":verbose":
                     _verbose = !_verbose;
                     Console.WriteLine($"Verbose mode: {(_verbose ? "ON" : "OFF")}");
@@ -363,6 +381,7 @@ Inspection Commands:
 
 Display Toggles:
   :ast             - Toggle AST display
+  :tac             - Toggle Three-Address Code display
   :verbose         - Toggle verbose output
 
 Session Commands:
