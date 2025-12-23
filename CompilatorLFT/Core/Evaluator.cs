@@ -105,9 +105,9 @@ namespace CompilatorLFT.Core
 
         /// <summary>
         /// Initializes the evaluator with a symbol table (backward compatibility).
-        /// Creates a ScopeManager internally and copies variables.
+        /// Creates a ScopeManager internally. Variables will be declared during execution.
         /// </summary>
-        /// <param name="symbolTable">Symbol table populated by parser</param>
+        /// <param name="symbolTable">Symbol table populated by parser (used for backward compatibility, not for pre-populating)</param>
         /// <param name="functions">User-defined functions</param>
         public Evaluator(SymbolTable symbolTable, Dictionary<string, FunctionDeclaration> functions = null)
         {
@@ -118,19 +118,10 @@ namespace CompilatorLFT.Core
             _callDepth = 0;
             _inLoop = false;
 
-            // Copy variables from SymbolTable to ScopeManager's global scope
-            if (symbolTable != null)
-            {
-                foreach (var variable in symbolTable.Variables)
-                {
-                    _scopeManager.DeclareVariable(
-                        variable.Name,
-                        variable.Type,
-                        variable.DeclarationLine,
-                        variable.DeclarationColumn,
-                        _errors);
-                }
-            }
+            // NOTE: We do NOT copy variables from SymbolTable to ScopeManager here.
+            // Variables will be declared during execution via ExecuteDeclaration.
+            // This prevents "already declared in current scope" errors that occurred
+            // when variables were declared both here and during execution.
         }
 
         #endregion

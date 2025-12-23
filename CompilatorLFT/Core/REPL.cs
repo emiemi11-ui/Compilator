@@ -28,7 +28,7 @@ namespace CompilatorLFT.Core
     {
         #region Private Fields
 
-        private SymbolTable _symbolTable;
+        private ScopeManager _scopeManager;
         private Dictionary<string, FunctionDeclaration> _functions;
         private readonly List<string> _history;
         private readonly List<CompilationError> _errors;
@@ -119,21 +119,11 @@ namespace CompilatorLFT.Core
                     return false;
                 }
 
-                // Syntactic analysis (with existing symbol table)
+                // Syntactic analysis
                 var parser = new Parser(code);
                 var program = parser.ParseProgram();
 
-                // Merge symbols
-                foreach (var variable in parser.SymbolTable.Variables)
-                {
-                    if (!_symbolTable.Exists(variable.Name))
-                    {
-                        _symbolTable.Add(variable.Name, variable.Type,
-                            variable.DeclarationLine, variable.DeclarationColumn, _errors);
-                    }
-                }
-
-                // Merge functions
+                // Merge functions (functions are still tracked separately)
                 foreach (var (name, func) in parser.Functions)
                 {
                     _functions[name] = func;
@@ -165,8 +155,9 @@ namespace CompilatorLFT.Core
                     tacGenerator.DisplayTAC();
                 }
 
-                // Evaluate
-                var evaluator = new Evaluator(_symbolTable, _functions);
+                // Evaluate using persistent ScopeManager
+                // Variables are declared during execution and persist across REPL commands
+                var evaluator = new Evaluator(_scopeManager, _functions);
                 evaluator.ExecuteProgram(program);
 
                 if (evaluator.Errors.Any())
@@ -192,7 +183,7 @@ namespace CompilatorLFT.Core
         /// </summary>
         public void Reset()
         {
-            _symbolTable = new SymbolTable();
+            _scopeManager = new ScopeManager();
             _functions = new Dictionary<string, FunctionDeclaration>();
             _errors.Clear();
             _lineNumber = 1;
@@ -418,7 +409,8 @@ Examples:
         {
             Console.WriteLine("\n=== VARIABLES ===");
 
-            if (_symbolTable.VariableCount == 0)
+            var globalScope = _scopeManager.GlobalScope;
+            if (globalScope.VariableCount == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("No variables declared.");
@@ -426,7 +418,7 @@ Examples:
                 return;
             }
 
-            foreach (var variable in _symbolTable.Variables)
+            foreach (var variable in globalScope.Variables)
             {
                 string value = variable.IsInitialized
                     ? FormatValue(variable.Value)
@@ -514,7 +506,9 @@ Examples:
                 return;
             }
 
-            var variable = _symbolTable.Get(varName);
+            // Look up variable in scope chain
+            var errors = new List<CompilationError>();
+            var variable = _scopeManager.LookupVariable(varName, 0, 0, errors);
 
             if (variable == null)
             {
