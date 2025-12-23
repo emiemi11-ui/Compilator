@@ -35,6 +35,12 @@ namespace CompilatorLFT.Core
             { "string", TokenType.KeywordString },
             { "void", TokenType.KeywordVoid },
             { "bool", TokenType.KeywordBool },
+            // New type keywords
+            { "struct", TokenType.KeywordStruct },
+            { "pointer", TokenType.KeywordPointer },
+            { "array", TokenType.KeywordArray },
+            { "new", TokenType.KeywordNew },
+            { "null", TokenType.KeywordNull },
             // Control flow keywords
             { "for", TokenType.KeywordFor },
             { "while", TokenType.KeywordWhile },
@@ -431,6 +437,15 @@ namespace CompilatorLFT.Core
                     TokenType.LogicalAnd, "&&",
                     lineStart, columnStart, start);
             }
+
+            // Arrow operator (->)
+            if (c == '-' && NextChar == '>')
+            {
+                Advance(); Advance();
+                return Token.Operator(
+                    TokenType.Arrow, "->",
+                    lineStart, columnStart, start);
+            }
             if (c == '|' && NextChar == '|')
             {
                 Advance(); Advance();
@@ -504,6 +519,8 @@ namespace CompilatorLFT.Core
                 '>' => TokenType.GreaterThan,
                 '=' => TokenType.Equal,
                 '!' => TokenType.LogicalNot,
+                '&' => TokenType.Ampersand,
+                '.' => TokenType.Dot,
                 ';' => TokenType.Semicolon,
                 ',' => TokenType.Comma,
                 ':' => TokenType.Colon,

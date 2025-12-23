@@ -536,6 +536,94 @@ namespace CompilatorLFT.Models.Statements
     }
 
     /// <summary>
+    /// Struct field definition.
+    /// </summary>
+    public sealed class StructField
+    {
+        public Token TypeKeyword { get; }
+        public Token Identifier { get; }
+
+        public StructField(Token typeKeyword, Token identifier)
+        {
+            TypeKeyword = typeKeyword ?? throw new ArgumentNullException(nameof(typeKeyword));
+            Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+        }
+    }
+
+    /// <summary>
+    /// Struct declaration statement.
+    /// Syntax: struct Name { int x; double y; }
+    /// </summary>
+    public sealed class StructDeclaration : Statement
+    {
+        public Token StructKeyword { get; }
+        public Token Name { get; }
+        public Token OpenBrace { get; }
+        public List<StructField> Fields { get; }
+        public Token CloseBrace { get; }
+
+        public override TokenType Type => TokenType.StructDeclaration;
+
+        public StructDeclaration(
+            Token structKeyword,
+            Token name,
+            Token openBrace,
+            List<StructField> fields,
+            Token closeBrace)
+        {
+            StructKeyword = structKeyword ?? throw new ArgumentNullException(nameof(structKeyword));
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            OpenBrace = openBrace ?? throw new ArgumentNullException(nameof(openBrace));
+            Fields = fields ?? new List<StructField>();
+            CloseBrace = closeBrace ?? throw new ArgumentNullException(nameof(closeBrace));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return StructKeyword;
+            yield return Name;
+            yield return OpenBrace;
+            // Fields aren't SyntaxNodes, so we skip them
+            yield return CloseBrace;
+        }
+    }
+
+    /// <summary>
+    /// Array assignment statement for setting array elements.
+    /// Syntax: arr[i] = value;
+    /// </summary>
+    public sealed class ArrayAssignmentStatement : Statement
+    {
+        public Expressions.ArrayAccessExpression ArrayAccess { get; }
+        public Token AssignOperator { get; }
+        public Expressions.Expression Expression { get; }
+        public Token Semicolon { get; }
+
+        public override TokenType Type => TokenType.AssignmentStatement;
+
+        public ArrayAssignmentStatement(
+            Expressions.ArrayAccessExpression arrayAccess,
+            Token assignOperator,
+            Expressions.Expression expression,
+            Token semicolon)
+        {
+            ArrayAccess = arrayAccess ?? throw new ArgumentNullException(nameof(arrayAccess));
+            AssignOperator = assignOperator ?? throw new ArgumentNullException(nameof(assignOperator));
+            Expression = expression ?? throw new ArgumentNullException(nameof(expression));
+            Semicolon = semicolon;
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return ArrayAccess;
+            yield return AssignOperator;
+            yield return Expression;
+            if (Semicolon != null)
+                yield return Semicolon;
+        }
+    }
+
+    /// <summary>
     /// Root node - the complete program.
     /// Contains the list of all top-level statements.
     /// </summary>
@@ -543,17 +631,21 @@ namespace CompilatorLFT.Models.Statements
     {
         public List<Statement> Statements { get; }
         public List<FunctionDeclaration> Functions { get; }
+        public List<StructDeclaration> Structs { get; }
 
         public override TokenType Type => TokenType.Program;
 
-        public Program(List<Statement> statements, List<FunctionDeclaration> functions = null)
+        public Program(List<Statement> statements, List<FunctionDeclaration> functions = null, List<StructDeclaration> structs = null)
         {
             Statements = statements ?? new List<Statement>();
             Functions = functions ?? new List<FunctionDeclaration>();
+            Structs = structs ?? new List<StructDeclaration>();
         }
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {
+            foreach (var s in Structs)
+                yield return s;
             foreach (var func in Functions)
                 yield return func;
             foreach (var stmt in Statements)
