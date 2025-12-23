@@ -35,16 +35,21 @@ namespace CompilatorLFT.Models.Statements
         /// <summary>Final semicolon.</summary>
         public Token Semicolon { get; }
 
+        /// <summary>Whether this is an array type declaration (e.g., int[]).</summary>
+        public bool IsArrayType { get; }
+
         public override TokenType Type => TokenType.DeclarationStatement;
 
         public DeclarationStatement(
             Token typeKeyword,
             List<(Token, Expression)> declarations,
-            Token semicolon)
+            Token semicolon,
+            bool isArrayType = false)
         {
             TypeKeyword = typeKeyword ?? throw new ArgumentNullException(nameof(typeKeyword));
             Declarations = declarations ?? throw new ArgumentNullException(nameof(declarations));
             Semicolon = semicolon ?? throw new ArgumentNullException(nameof(semicolon));
+            IsArrayType = isArrayType;
 
             if (!typeKeyword.IsTypeKeyword())
                 throw new ArgumentException("Must be type keyword (int/double/string)");
