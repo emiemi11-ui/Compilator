@@ -672,4 +672,42 @@ namespace CompilatorLFT.Models.Expressions
     }
 
     #endregion
+
+    #region Compound Assignment Expression
+
+    /// <summary>
+    /// Compound assignment expression that can be used within other expressions.
+    /// </summary>
+    /// <example>
+    /// int q = (p += 5) * 2;  // (p += 5) returns the new value of p
+    /// </example>
+    public sealed class CompoundAssignmentExpression : Expression
+    {
+        /// <summary>The variable being assigned.</summary>
+        public Token Identifier { get; }
+
+        /// <summary>The compound assignment operator (+=, -=, *=, /=, %=).</summary>
+        public Token Operator { get; }
+
+        /// <summary>The expression on the right side of the operator.</summary>
+        public Expression RightExpression { get; }
+
+        public override TokenType Type => TokenType.BinaryExpression;
+
+        public CompoundAssignmentExpression(Token identifier, Token operatorToken, Expression rightExpression)
+        {
+            Identifier = identifier ?? throw new ArgumentNullException(nameof(identifier));
+            Operator = operatorToken ?? throw new ArgumentNullException(nameof(operatorToken));
+            RightExpression = rightExpression ?? throw new ArgumentNullException(nameof(rightExpression));
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Identifier;
+            yield return Operator;
+            yield return RightExpression;
+        }
+    }
+
+    #endregion
 }

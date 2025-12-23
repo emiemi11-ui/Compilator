@@ -618,6 +618,7 @@ namespace CompilatorLFT.Core
                 MemberAccessExpression member => EvaluateMemberAccess(member),
                 AddressOfExpression addr => EvaluateAddressOf(addr),
                 DereferenceExpression deref => EvaluateDereference(deref),
+                CompoundAssignmentExpression compound => EvaluateCompoundAssignmentExpression(compound),
                 _ => null
             };
         }
@@ -784,6 +785,44 @@ namespace CompilatorLFT.Core
                 inc.Identifier.Line, inc.Identifier.Column, _errors);
 
             return returnValue;
+        }
+
+        /// <summary>
+        /// Evaluates a compound assignment expression and returns the new value.
+        /// This allows compound assignments to be used in expressions like: int q = (p += 5) * 2;
+        /// </summary>
+        private object EvaluateCompoundAssignmentExpression(CompoundAssignmentExpression expr)
+        {
+            var currentValue = _scopeManager.GetVariableValue(
+                expr.Identifier.Text, expr.Identifier.Line, expr.Identifier.Column, _errors);
+
+            var rightValue = EvaluateExpression(expr.RightExpression);
+
+            if (currentValue == null || rightValue == null)
+                return null;
+
+            object result = expr.Operator.Type switch
+            {
+                TokenType.PlusEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Plus, "+", null, expr.Operator.Line, expr.Operator.Column, 0), rightValue),
+                TokenType.MinusEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Minus, "-", null, expr.Operator.Line, expr.Operator.Column, 0), rightValue),
+                TokenType.StarEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Star, "*", null, expr.Operator.Line, expr.Operator.Column, 0), rightValue),
+                TokenType.SlashEqual => EvaluateArithmeticOperation(currentValue,
+                    new Token(TokenType.Slash, "/", null, expr.Operator.Line, expr.Operator.Column, 0), rightValue),
+                TokenType.PercentEqual => EvaluateModulo(currentValue, rightValue, expr.Operator),
+                _ => null
+            };
+
+            if (result != null)
+            {
+                _scopeManager.SetVariableValue(
+                    expr.Identifier.Text, result,
+                    expr.Identifier.Line, expr.Identifier.Column, _errors);
+            }
+
+            return result;  // Return the new value so it can be used in expressions
         }
 
         /// <summary>
