@@ -387,6 +387,86 @@ namespace CompilatorLFT.Tests
                 var r = evaluator.ScopeManager.LookupVariable("r", 0, 0, errors);
                 return (int)r.Value == 1;
             });
+
+            // Test 25: Recursive function (factorial)
+            Test("Integration: Recursive factorial", () =>
+            {
+                var code = @"
+                    function factorial(int n) {
+                        if (n <= 1) {
+                            return 1;
+                        }
+                        return n * factorial(n - 1);
+                    }
+                    int result = factorial(5);
+                ";
+                var parser = new Parser(code);
+                var program = parser.ParseProgram();
+
+                // Should parse without errors (recursion is allowed)
+                if (parser.Errors.Any(e => e.Message.Contains("factorial") && e.Message.Contains("not defined")))
+                    return false;
+
+                var evaluator = new Evaluator();
+                evaluator.ExecuteProgram(program);
+
+                var errors = new List<CompilationError>();
+                var result = evaluator.ScopeManager.LookupVariable("result", 0, 0, errors);
+                return result != null && result.IsInitialized && (int)result.Value == 120; // 5! = 120
+            });
+
+            // Test 26: Double recursive function (fibonacci)
+            Test("Integration: Recursive fibonacci", () =>
+            {
+                var code = @"
+                    function fib(int n) {
+                        if (n <= 1) {
+                            return n;
+                        }
+                        return fib(n - 1) + fib(n - 2);
+                    }
+                    int result = fib(6);
+                ";
+                var parser = new Parser(code);
+                var program = parser.ParseProgram();
+
+                // Should parse without errors (double recursion allowed)
+                if (parser.Errors.Any(e => e.Message.Contains("fib") && e.Message.Contains("not defined")))
+                    return false;
+
+                var evaluator = new Evaluator();
+                evaluator.ExecuteProgram(program);
+
+                var errors = new List<CompilationError>();
+                var result = evaluator.ScopeManager.LookupVariable("result", 0, 0, errors);
+                return result != null && result.IsInitialized && (int)result.Value == 8; // fib(6) = 8
+            });
+
+            // Test 27: Countdown recursion (sum)
+            Test("Integration: Recursive countdown sum", () =>
+            {
+                var code = @"
+                    function countdown(int n) {
+                        if (n <= 0) {
+                            return 0;
+                        }
+                        return n + countdown(n - 1);
+                    }
+                    int result = countdown(10);
+                ";
+                var parser = new Parser(code);
+                var program = parser.ParseProgram();
+
+                if (parser.Errors.Count > 0)
+                    return false;
+
+                var evaluator = new Evaluator();
+                evaluator.ExecuteProgram(program);
+
+                var errors = new List<CompilationError>();
+                var result = evaluator.ScopeManager.LookupVariable("result", 0, 0, errors);
+                return result != null && result.IsInitialized && (int)result.Value == 55; // 1+2+...+10 = 55
+            });
         }
 
         #endregion
@@ -395,7 +475,7 @@ namespace CompilatorLFT.Tests
 
         static void RunErrorDetectionTests()
         {
-            // Test 25: Undeclared variable
+            // Test 28: Undeclared variable
             Test("Error: Undeclared variable", () =>
             {
                 var parser = new Parser("x = 5;");
@@ -406,7 +486,7 @@ namespace CompilatorLFT.Tests
                     e.Message.Contains("was not declared"));
             });
 
-            // Test 26: Duplicate declaration
+            // Test 29: Duplicate declaration
             Test("Error: Duplicate declaration", () =>
             {
                 var parser = new Parser("int a; int a;");
@@ -420,7 +500,7 @@ namespace CompilatorLFT.Tests
                     e.Message.Contains("already declared"));
             });
 
-            // Test 27: Unary plus (forbidden)
+            // Test 30: Unary plus (forbidden)
             Test("Error: Unary plus not allowed", () =>
             {
                 var parser = new Parser("int a = +5;");
@@ -430,7 +510,7 @@ namespace CompilatorLFT.Tests
                     e.Message.Contains("unary plus"));
             });
 
-            // Test 28: Division by zero
+            // Test 31: Division by zero
             Test("Error: Division by zero", () =>
             {
                 var parser = new Parser("int a = 5; int b = 0; int c = a / b;");
@@ -442,7 +522,7 @@ namespace CompilatorLFT.Tests
                     e.Message.Contains("division by zero"));
             });
 
-            // Test 29: String with number (incompatible)
+            // Test 32: String with number (incompatible)
             Test("Error: String + number incompatible", () =>
             {
                 var parser = new Parser("string s = \"test\"; int n = 5; string r = s + n;");
@@ -454,7 +534,7 @@ namespace CompilatorLFT.Tests
                     e.Message.Contains("mismatch"));
             });
 
-            // Test 30: Unclosed string
+            // Test 33: Unclosed string
             Test("Error: Unclosed string", () =>
             {
                 var lexer = new Lexer("string s = \"hello");
@@ -463,6 +543,18 @@ namespace CompilatorLFT.Tests
                 return lexer.Errors.Any(e =>
                     e.Type == ErrorType.Lexical &&
                     e.Message.Contains("unclosed"));
+            });
+
+            // Test 34: Undefined function should still error
+            Test("Error: Undefined function", () =>
+            {
+                var parser = new Parser("int x = undefinedFunc();");
+                parser.ParseProgram();
+
+                return parser.Errors.Any(e =>
+                    e.Type == ErrorType.Semantic &&
+                    e.Message.Contains("undefinedFunc") &&
+                    e.Message.Contains("not defined"));
             });
         }
 

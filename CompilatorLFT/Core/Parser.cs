@@ -57,6 +57,9 @@ namespace CompilatorLFT.Core
         // Scope management for proper variable scoping
         private readonly Stack<HashSet<string>> _scopeStack;
 
+        // Track currently-being-parsed function name to allow recursion
+        private string _currentFunctionBeingParsed;
+
         #endregion
 
         #region Properties
@@ -391,8 +394,20 @@ namespace CompilatorLFT.Core
                 AddVariableToScope(param.Identifier.Text, dataType, param.Identifier.Line, param.Identifier.Column);
             }
 
+            // Track current function to allow recursive calls
+            _currentFunctionBeingParsed = name.Text;
+
             // Body
-            var body = ParseBlock();
+            BlockStatement body;
+            try
+            {
+                body = ParseBlock();
+            }
+            finally
+            {
+                // Clear current function tracking
+                _currentFunctionBeingParsed = null;
+            }
 
             // Pop function scope - removes function parameters and local variables
             PopScope();
@@ -1167,8 +1182,10 @@ namespace CompilatorLFT.Core
 
             var closeParen = ExpectType(TokenType.CloseParen);
 
-            // Check if function exists (unless built-in)
-            if (!IsBuiltInFunction(functionName.Text) && !_functions.ContainsKey(functionName.Text))
+            // Check if function exists (unless built-in or recursive call to current function)
+            if (!IsBuiltInFunction(functionName.Text) &&
+                !_functions.ContainsKey(functionName.Text) &&
+                functionName.Text != _currentFunctionBeingParsed)
             {
                 _errors.Add(CompilationError.Semantic(
                     functionName.Line, functionName.Column,
